@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Entry 2.0 - Secure</title>
+  <style>
+    :root {
+      --primary: #007bff;
+      --primary-hover: #0056b3;
+      --gray-bg: #f8f9fa;
+      --border-color: #ced4da;
+      --font: 'Segoe UI', Tahoma, sans-serif;
+      --btn-gray: #6c757d;
+      --btn-gray-hover: #5a6268;
+      --btn-red: #dc3545;
+      --btn-red-hover: #b02a37;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--gray-bg);
+      margin: 0;
+      padding: 30px;
+    }
+    .section {
+      background: white;
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto 24px auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+    .btn {
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 8px 14px;
+      color: white;
+      margin: 0 6px 6px 0;
+    }
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-gray { background-color: var(--btn-gray); }
+    .btn-gray:hover { background-color: var(--btn-gray-hover); }
+    .btn-red { background-color: var(--btn-red); }
+    .btn-red:hover { background-color: var(--btn-red-hover); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      text-align: left;
+    }
+    th.required::after {
+      content: " *";
+      color: var(--btn-red);
+    }
+    input, select {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    .invalid-hours {
+      border: 1px solid var(--btn-red);
+      background-color: #ffe5e5;
+    }
+    .group-section { margin-bottom: 20px; }
+    .week-header td {
+      background-color: #f1f1f1;
+      font-weight: bold;
+    }
+    .total-row {
+      background-color: #e6f0fa;
+      font-weight: bold;
+    }
+    #app { display: none; }
+  </style>
+</head>
+<body>
+  <div class="section" id="authSection">
+    <h2>Please Sign In</h2>
+    <button class="btn btn-primary" onclick="signIn()">Sign In with Microsoft</button>
+  </div>
+
+  <div id="app">
+    <div class="section">
+      <h2>Time Entry</h2>
+      <button class="btn btn-primary" onclick="addRow()">Add Time</button>
+      <button class="btn btn-primary" onclick="saveAll()">Save All</button>
+      <button class="btn btn-red" onclick="removeAll()">Remove All</button>
+      <table>
+        <thead>
+          <tr>
+            <th class="required">Name</th>
+            <th class="required">Date</th>
+            <th class="required">Task</th>
+            <th class="required">Hours</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="entryBody"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Current Entries</h2>
+      <div id="currentEntriesContainer"></div>
+    </div>
+  </div>
+
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <script>
+    const msalConfig = {
+      auth: {
+        clientId: 'abe43417-4888-481d-8e63-c335313a3eac',
+        authority: 'https://login.microsoftonline.com/94f35210-3fa2-4689-8c39-06670b265f94',
+		redirectUri: 'https://netorgft5961137.sharepoint.com/sites/NewBalance984/Taylor/Time%20Entry%202.0.html'
+      }
+    };
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+    async function signIn() {
+      try {
+        const loginResponse = await msalInstance.loginPopup({ scopes: ["User.Read", "Sites.ReadWrite.All"] });
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        addRow();
+        initDefaultGroup("Taylor");
+      } catch (err) {
+        console.error("Login failed:", err);
+      }
+    }
+
+    const entryGroups = {};
+
+    function addRow(data = {}) {
+      const table = document.getElementById('entryBody');
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="text" value="${data.name || ''}" required></td>
+        <td><input type="date" value="${data.date || ''}" required></td>
+        <td><input type="text" value="${data.task || ''}" required></td>
+        <td><input type="number" step="0.25" min="0" value="${data.hours ?? 0}" oninput="validateHours(this)"></td>
+        <td><input type="text" value="${data.notes || ''}"></td>
+        <td>
+          <button class="btn btn-primary btn-sm" onclick="saveRow(this)">Save</button>
+          <button class="btn btn-gray btn-sm" onclick="copyRow(this)">Copy</button>
+          <button class="btn btn-red btn-sm" onclick="removeRow(this)">Remove</button>
+        </td>`;
+      table.appendChild(row);
+    }
+
+    function validateHours(input) {
+      const val = parseFloat(input.value);
+      input.classList.toggle("invalid-hours", !(val > 0 && val <= 24 && val % 0.25 === 0));
+    }
+
+    function copyRow(btn) {
+      const row = btn.closest('tr');
+      const inputs = row.querySelectorAll('input');
+      addRow({
+        name: inputs[0].value,
+        date: inputs[1].value,
+        task: inputs[2].value,
+        hours: inputs[3].value,
+        notes: inputs[4].value
+      });
+    }
+
+    function removeRow(btn) {
+      const row = btn.closest('tr');
+      row.remove();
+      if (!document.querySelector('#entryBody tr')) addRow();
+    }
+
+    function removeAll() {
+      document.getElementById('entryBody').innerHTML = '';
+      addRow();
+    }
+
+    function saveRow(btn) {
+      const row = btn.closest('tr');
+      if (validateRow(row)) {
+        moveToCurrent(row);
+        row.remove();
+        if (!document.querySelector('#entryBody tr')) addRow();
+      }
+    }
+
+    function saveAll() {
+      [...document.querySelectorAll('#entryBody tr')].forEach(row => {
+        if (validateRow(row)) {
+          moveToCurrent(row);
+          row.remove();
+        }
+      });
+      if (!document.querySelector('#entryBody tr')) addRow();
+    }
+
+    function validateRow(row) {
+      let valid = true;
+      row.querySelectorAll('input').forEach(input => {
+        if (input.type === 'number') validateHours(input);
+        if (!input.checkValidity()) valid = false;
+      });
+      return valid;
+    }
+
+    function moveToCurrent(row) {
+      const inputs = row.querySelectorAll('input');
+      const data = {
+        name: inputs[0].value,
+        date: inputs[1].value,
+        task: inputs[2].value,
+        hours: parseFloat(inputs[3].value),
+        notes: inputs[4].value
+      };
+      const weekLabel = getWeekLabel(data.date);
+
+      if (!entryGroups[data.name]) {
+        initDefaultGroup(data.name);
+      }
+
+      if (!entryGroups[data.name].weeks[weekLabel]) {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+          <table>
+            <thead><tr><th>Name</th><th>Date</th><th>Task</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead>
+            <tbody><tr class="week-header"><td colspan="6">${weekLabel}</td></tr></tbody>
+          </table>`;
+        entryGroups[data.name].container.appendChild(wrapper);
+        entryGroups[data.name].weeks[weekLabel] = wrapper.querySelector('tbody');
+      }
+
+      const tbody = entryGroups[data.name].weeks[weekLabel];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${data.name}</td>
+        <td>${data.date}</td>
+        <td>${data.task}</td>
+        <td>${data.hours.toFixed(2)}</td>
+        <td>${data.notes}</td>
+        <td><button class="btn btn-red btn-sm" onclick="this.closest('tr').remove(); updateTotal('${data.name}', '${weekLabel}')">Delete</button></td>`;
+      tbody.appendChild(tr);
+      updateTotal(data.name, weekLabel);
+    }
+
+    function updateTotal(name, weekLabel) {
+      const tbody = entryGroups[name].weeks[weekLabel];
+      let total = 0;
+      const rows = [...tbody.querySelectorAll('tr')].filter(r => !r.classList.contains('week-header') && !r.classList.contains('total-row'));
+      rows.forEach(r => total += parseFloat(r.children[3].textContent));
+      let totalRow = tbody.querySelector('.total-row');
+      if (!totalRow) {
+        totalRow = document.createElement('tr');
+        totalRow.className = 'total-row';
+        totalRow.innerHTML = `<td colspan="3">Total:</td><td>${total.toFixed(2)}</td><td colspan="2"></td>`;
+        tbody.appendChild(totalRow);
+      } else {
+        totalRow.children[1].textContent = total.toFixed(2);
+      }
+    }
+
+    function getWeekLabel(dateStr) {
+      const d = new Date(dateStr);
+      const start = new Date(d);
+      start.setDate(d.getDate() - d.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
+    }
+
+    function initDefaultGroup(name) {
+      if (entryGroups[name]) return;
+      const container = document.getElementById('currentEntriesContainer');
+      const groupDiv = document.createElement('details');
+      groupDiv.open = true;
+      groupDiv.className = 'group-section';
+      groupDiv.innerHTML = `<summary><strong>${name}'s Entries</strong></summary><div class="group-weeks"></div>`;
+      container.appendChild(groupDiv);
+      entryGroups[name] = { container: groupDiv.querySelector('.group-weeks'), weeks: {} };
+    }
+  </script>
+</body>
+</html>
