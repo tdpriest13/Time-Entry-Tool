@@ -121,12 +121,16 @@
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <script>
     const msalConfig = {
-      auth: {
-        clientId: 'abe43417-4888-481d-8e63-c335313a3eac',
-        authority: 'https://login.microsoftonline.com/94f35210-3fa2-4689-8c39-06670b265f94',
-		redirectUri: 'https://netorgft5961137.sharepoint.com/sites/NewBalance984/Taylor/Time%20Entry%202.0.html'
-      }
-    };
+  auth: {
+    clientId: "abe43417-4888-481d-8e63-c335313a3eac",
+    authority: "https://login.microsoftonline.com/94f35210-3fa2-4689-8c39-06670b265f94",
+    redirectUri: "https://tdpriest13.github.io/Time-Entry-Tool/"
+  },
+  cache: {
+    cacheLocation: "localStorage",
+    storeAuthStateInCookie: false
+  }
+};
     const msalInstance = new msal.PublicClientApplication(msalConfig);
 
     async function signIn() {
@@ -293,3 +297,4 @@
   </script>
 </body>
 </html>
+
