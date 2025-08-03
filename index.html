@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Time Entry 2.0</title>
-  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time Entry Tool</title>
   <style>
     :root {
       --primary: #007bff;
@@ -43,7 +42,7 @@
       cursor: pointer;
       padding: 8px 14px;
       color: white;
-      margin: 0 6px 6px 0;
+      margin: 6px 6px 6px 0;
     }
     .btn-primary { background-color: var(--primary); }
     .btn-primary:hover { background-color: var(--primary-hover); }
@@ -74,39 +73,23 @@
       border: 1px solid var(--btn-red);
       background-color: #ffe5e5;
     }
-    .group-section {
-      margin-bottom: 20px;
-    }
-    .week-header td {
-      background-color: #f1f1f1;
-      font-weight: bold;
-    }
-    .total-row {
-      background-color: #e6f0fa;
-      font-weight: bold;
-    }
-    #login-screen {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    #app {
-      display: none;
-    }
+    .hidden { display: none; }
+    .group-section { margin-bottom: 20px; }
+    .week-header td { background-color: #f1f1f1; font-weight: bold; }
+    .total-row { background-color: #e6f0fa; font-weight: bold; }
+    #signin-container { text-align: center; margin-top: 100px; }
   </style>
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 </head>
 <body>
-  <div id="login-screen">
+  <div id="signin-container">
+    <h2>Welcome to the Time Entry Tool</h2>
     <button class="btn btn-primary" onclick="signIn()">Sign In</button>
   </div>
 
-  <div id="app">
+  <div id="main-ui" class="hidden">
     <div class="section">
       <h2>Time Entry</h2>
-      <button class="btn btn-primary" onclick="addRow()">Add Time</button>
-      <button class="btn btn-primary" onclick="saveAll()">Save All</button>
-      <button class="btn btn-red" onclick="removeAll()">Remove All</button>
       <table>
         <thead>
           <tr>
@@ -120,6 +103,9 @@
         </thead>
         <tbody id="entryBody"></tbody>
       </table>
+      <button class="btn btn-primary" onclick="addRow()">Add Time</button>
+      <button class="btn btn-primary" onclick="saveAll()">Save All</button>
+      <button class="btn btn-red" onclick="removeAll()">Remove All</button>
     </div>
 
     <div class="section">
@@ -129,37 +115,32 @@
   </div>
 
   <script>
-    const msalConfig = {
+    const msalInstance = new msal.PublicClientApplication({
       auth: {
         clientId: "abe43417-4888-481d-8e63-c335313a3eac",
         authority: "https://login.microsoftonline.com/94f35210-3fa2-4689-8c39-06670b265f94",
         redirectUri: "https://tdpriest13.github.io/Time-Entry-Tool/"
       }
-    };
-    const msalInstance = new msal.PublicClientApplication(msalConfig);
-    const tokenRequest = {
-      scopes: ["User.Read", "Sites.ReadWrite.All"]
-    };
-    let accessToken = "";
+    });
+
+    let accessToken = null;
 
     async function signIn() {
       try {
-        const response = await msalInstance.loginPopup(tokenRequest);
-        document.getElementById("login-screen").style.display = "none";
-        document.getElementById("app").style.display = "block";
-        const tokenResp = await msalInstance.acquireTokenSilent(tokenRequest);
-        accessToken = tokenResp.accessToken;
+        const result = await msalInstance.loginPopup({ scopes: ["User.Read", "Sites.ReadWrite.All"] });
+        accessToken = (await msalInstance.acquireTokenSilent({ scopes: ["Sites.ReadWrite.All"], account: result.account })).accessToken;
+        document.getElementById("signin-container").classList.add("hidden");
+        document.getElementById("main-ui").classList.remove("hidden");
         addRow();
-      } catch (error) {
-        console.error("Login failed:", error);
+      } catch (err) {
+        console.error(err);
+        alert("Sign-in failed");
       }
     }
 
-    const entryGroups = {};
-
     function addRow(data = {}) {
-      const table = document.getElementById('entryBody');
-      const row = document.createElement('tr');
+      const table = document.getElementById("entryBody");
+      const row = document.createElement("tr");
       row.innerHTML = `
         <td><input type="text" value="${data.name || ''}" required></td>
         <td><input type="date" value="${data.date || ''}" required></td>
@@ -170,8 +151,7 @@
           <button class="btn btn-primary btn-sm" onclick="saveRow(this)">Save</button>
           <button class="btn btn-gray btn-sm" onclick="copyRow(this)">Copy</button>
           <button class="btn btn-red btn-sm" onclick="removeRow(this)">Remove</button>
-        </td>
-      `;
+        </td>`;
       table.appendChild(row);
     }
 
@@ -181,8 +161,8 @@
     }
 
     function copyRow(btn) {
-      const row = btn.closest('tr');
-      const inputs = row.querySelectorAll('input');
+      const row = btn.closest("tr");
+      const inputs = row.querySelectorAll("input");
       addRow({
         name: inputs[0].value,
         date: inputs[1].value,
@@ -193,20 +173,21 @@
     }
 
     function removeRow(btn) {
-      const row = btn.closest('tr');
+      const row = btn.closest("tr");
       row.remove();
-      if (!document.querySelector('#entryBody tr')) addRow();
+      if (!document.querySelector("#entryBody tr")) addRow();
     }
 
     function removeAll() {
-      document.getElementById('entryBody').innerHTML = '';
+      document.getElementById("entryBody").innerHTML = '';
       addRow();
     }
 
     async function saveRow(btn) {
-      const row = btn.closest('tr');
+      const row = btn.closest("tr");
       if (!validateRow(row)) return;
-      const inputs = row.querySelectorAll('input');
+
+      const inputs = row.querySelectorAll("input");
       const data = {
         Name: inputs[0].value,
         Date: inputs[1].value,
@@ -222,102 +203,23 @@
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            fields: data
-          })
+          body: JSON.stringify({ fields: data })
         });
-
-        moveToCurrent(row);
         row.remove();
-        if (!document.querySelector('#entryBody tr')) addRow();
+        if (!document.querySelector("#entryBody tr")) addRow();
       } catch (err) {
-        console.error("SharePoint write failed:", err);
-        alert("There was an error saving this entry to SharePoint.");
+        console.error("Failed to save to SharePoint", err);
+        alert("Save failed");
       }
-    }
-
-    function saveAll() {
-      [...document.querySelectorAll('#entryBody tr')].forEach(row => {
-        saveRow(row.querySelector('button'));
-      });
     }
 
     function validateRow(row) {
       let valid = true;
-      row.querySelectorAll('input').forEach(input => {
+      row.querySelectorAll("input").forEach(input => {
         if (input.type === 'number') validateHours(input);
         if (!input.checkValidity()) valid = false;
       });
       return valid;
-    }
-
-    function moveToCurrent(row) {
-      const inputs = row.querySelectorAll('input');
-      const data = {
-        name: inputs[0].value,
-        date: inputs[1].value,
-        task: inputs[2].value,
-        hours: parseFloat(inputs[3].value),
-        notes: inputs[4].value
-      };
-      const weekLabel = getWeekLabel(data.date);
-
-      if (!entryGroups[data.name]) {
-        const groupDiv = document.createElement('details');
-        groupDiv.open = true;
-        groupDiv.className = 'group-section';
-        groupDiv.innerHTML = `<summary><strong>${data.name}'s Entries</strong></summary><div class="group-weeks"></div>`;
-        document.getElementById('currentEntriesContainer').appendChild(groupDiv);
-        entryGroups[data.name] = { container: groupDiv.querySelector('.group-weeks'), weeks: {} };
-      }
-
-      if (!entryGroups[data.name].weeks[weekLabel]) {
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = `
-          <table>
-            <thead><tr><th>Name</th><th>Date</th><th>Task</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead>
-            <tbody><tr class="week-header"><td colspan="6">${weekLabel}</td></tr></tbody>
-          </table>`;
-        entryGroups[data.name].container.appendChild(wrapper);
-        entryGroups[data.name].weeks[weekLabel] = wrapper.querySelector('tbody');
-      }
-
-      const tbody = entryGroups[data.name].weeks[weekLabel];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${data.name}</td>
-        <td>${data.date}</td>
-        <td>${data.task}</td>
-        <td>${data.hours.toFixed(2)}</td>
-        <td>${data.notes}</td>
-        <td><button class="btn btn-red btn-sm" onclick="this.closest('tr').remove(); updateTotal('${data.name}', '${weekLabel}')">Delete</button></td>`;
-      tbody.appendChild(tr);
-      updateTotal(data.name, weekLabel);
-    }
-
-    function updateTotal(name, weekLabel) {
-      const tbody = entryGroups[name].weeks[weekLabel];
-      let total = 0;
-      const rows = [...tbody.querySelectorAll('tr')].filter(r => !r.classList.contains('week-header') && !r.classList.contains('total-row'));
-      rows.forEach(r => total += parseFloat(r.children[3].textContent));
-      let totalRow = tbody.querySelector('.total-row');
-      if (!totalRow) {
-        totalRow = document.createElement('tr');
-        totalRow.className = 'total-row';
-        totalRow.innerHTML = `<td colspan="3">Total:</td><td>${total.toFixed(2)}</td><td colspan="2"></td>`;
-        tbody.appendChild(totalRow);
-      } else {
-        totalRow.children[1].textContent = total.toFixed(2);
-      }
-    }
-
-    function getWeekLabel(dateStr) {
-      const d = new Date(dateStr);
-      const start = new Date(d);
-      start.setDate(d.getDate() - d.getDay());
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
     }
   </script>
 </body>
