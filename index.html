@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Time Entry Tool</title>
+  <title>Time Entry 2.0</title>
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <style>
     :root {
@@ -65,7 +65,7 @@
       content: " *";
       color: var(--btn-red);
     }
-    input {
+    input, select {
       width: 100%;
       padding: 6px;
       box-sizing: border-box;
@@ -85,33 +85,47 @@
       background-color: #e6f0fa;
       font-weight: bold;
     }
+    #login-screen {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #app {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <div class="section">
-    <h2>Time Entry</h2>
-    <button class="btn btn-primary" onclick="addRow()">Add Time</button>
-    <button class="btn btn-primary" onclick="saveAll()">Save All</button>
-    <button class="btn btn-red" onclick="removeAll()">Remove All</button>
-    <button class="btn btn-gray" onclick="signIn()">Sign In</button>
-    <table>
-      <thead>
-        <tr>
-          <th class="required">Name</th>
-          <th class="required">Date</th>
-          <th class="required">Task</th>
-          <th class="required">Hours</th>
-          <th>Notes</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="entryBody"></tbody>
-    </table>
+  <div id="login-screen">
+    <button class="btn btn-primary" onclick="signIn()">Sign In</button>
   </div>
 
-  <div class="section">
-    <h2>Current Entries</h2>
-    <div id="currentEntriesContainer"></div>
+  <div id="app">
+    <div class="section">
+      <h2>Time Entry</h2>
+      <button class="btn btn-primary" onclick="addRow()">Add Time</button>
+      <button class="btn btn-primary" onclick="saveAll()">Save All</button>
+      <button class="btn btn-red" onclick="removeAll()">Remove All</button>
+      <table>
+        <thead>
+          <tr>
+            <th class="required">Name</th>
+            <th class="required">Date</th>
+            <th class="required">Task</th>
+            <th class="required">Hours</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="entryBody"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Current Entries</h2>
+      <div id="currentEntriesContainer"></div>
+    </div>
   </div>
 
   <script>
@@ -122,27 +136,25 @@
         redirectUri: "https://tdpriest13.github.io/Time-Entry-Tool/"
       }
     };
-
     const msalInstance = new msal.PublicClientApplication(msalConfig);
-    let accessToken = null;
+    const tokenRequest = {
+      scopes: ["User.Read", "Sites.ReadWrite.All"]
+    };
+    let accessToken = "";
 
     async function signIn() {
       try {
-        const loginResponse = await msalInstance.loginPopup({ scopes: ["User.Read", "Sites.ReadWrite.All"] });
-        const tokenResponse = await msalInstance.acquireTokenSilent({
-          account: loginResponse.account,
-          scopes: ["User.Read", "Sites.ReadWrite.All"]
-        });
-        accessToken = tokenResponse.accessToken;
-        alert("Signed in successfully.");
+        const response = await msalInstance.loginPopup(tokenRequest);
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        const tokenResp = await msalInstance.acquireTokenSilent(tokenRequest);
+        accessToken = tokenResp.accessToken;
+        addRow();
       } catch (error) {
-        console.error("Authentication failed:", error);
-        alert("Authentication failed.");
+        console.error("Login failed:", error);
       }
     }
 
-    const siteUrl = "https://netorgft5961137.sharepoint.com/sites/NewBalance984";
-    const listName = "TimeEntries";
     const entryGroups = {};
 
     function addRow(data = {}) {
@@ -191,6 +203,45 @@
       addRow();
     }
 
+    async function saveRow(btn) {
+      const row = btn.closest('tr');
+      if (!validateRow(row)) return;
+      const inputs = row.querySelectorAll('input');
+      const data = {
+        Name: inputs[0].value,
+        Date: inputs[1].value,
+        Task: inputs[2].value,
+        Hours: parseFloat(inputs[3].value),
+        Notes: inputs[4].value
+      };
+
+      try {
+        await fetch("https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            fields: data
+          })
+        });
+
+        moveToCurrent(row);
+        row.remove();
+        if (!document.querySelector('#entryBody tr')) addRow();
+      } catch (err) {
+        console.error("SharePoint write failed:", err);
+        alert("There was an error saving this entry to SharePoint.");
+      }
+    }
+
+    function saveAll() {
+      [...document.querySelectorAll('#entryBody tr')].forEach(row => {
+        saveRow(row.querySelector('button'));
+      });
+    }
+
     function validateRow(row) {
       let valid = true;
       row.querySelectorAll('input').forEach(input => {
@@ -200,18 +251,7 @@
       return valid;
     }
 
-    function getWeekLabel(dateStr) {
-      const d = new Date(dateStr);
-      const start = new Date(d);
-      start.setDate(d.getDate() - d.getDay());
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
-    }
-
-    function saveRow(btn) {
-      const row = btn.closest('tr');
-      if (!validateRow(row)) return;
+    function moveToCurrent(row) {
       const inputs = row.querySelectorAll('input');
       const data = {
         name: inputs[0].value,
@@ -220,64 +260,8 @@
         hours: parseFloat(inputs[3].value),
         notes: inputs[4].value
       };
-      saveToSharePoint(data);
-      moveToCurrent(data);
-      row.remove();
-      if (!document.querySelector('#entryBody tr')) addRow();
-    }
-
-    function saveAll() {
-      [...document.querySelectorAll('#entryBody tr')].forEach(row => {
-        if (!validateRow(row)) return;
-        const inputs = row.querySelectorAll('input');
-        const data = {
-          name: inputs[0].value,
-          date: inputs[1].value,
-          task: inputs[2].value,
-          hours: parseFloat(inputs[3].value),
-          notes: inputs[4].value
-        };
-        saveToSharePoint(data);
-        moveToCurrent(data);
-        row.remove();
-      });
-      if (!document.querySelector('#entryBody tr')) addRow();
-    }
-
-    async function saveToSharePoint(data) {
-      if (!accessToken) {
-        alert("Please sign in first.");
-        return;
-      }
-      const url = `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`;
-      const body = {
-        __metadata: { type: "SP.Data.TimeEntriesListItem" },
-        Title: data.name,
-        Name: data.name,
-        Date: data.date,
-        Task: data.task,
-        Hours: data.hours,
-        Notes: data.notes
-      };
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose"
-          },
-          body: JSON.stringify(body)
-        });
-        if (!res.ok) throw new Error(await res.text());
-      } catch (err) {
-        console.error("SharePoint save error:", err);
-        alert("Failed to save to SharePoint.");
-      }
-    }
-
-    function moveToCurrent(data) {
       const weekLabel = getWeekLabel(data.date);
+
       if (!entryGroups[data.name]) {
         const groupDiv = document.createElement('details');
         groupDiv.open = true;
@@ -327,17 +311,14 @@
       }
     }
 
-    window.onload = () => {
-      addRow();
-      const defaultName = "Taylor";
-      const container = document.getElementById('currentEntriesContainer');
-      const groupDiv = document.createElement('details');
-      groupDiv.open = true;
-      groupDiv.className = 'group-section';
-      groupDiv.innerHTML = `<summary><strong>${defaultName}'s Entries</strong></summary><div class="group-weeks"></div>`;
-      container.appendChild(groupDiv);
-      entryGroups[defaultName] = { container: groupDiv.querySelector('.group-weeks'), weeks: {} };
-    };
+    function getWeekLabel(dateStr) {
+      const d = new Date(dateStr);
+      const start = new Date(d);
+      start.setDate(d.getDate() - d.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
+    }
   </script>
 </body>
 </html>
