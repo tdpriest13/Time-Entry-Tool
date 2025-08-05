@@ -6,102 +6,80 @@
   <title>Time Entry Tool</title>
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <style>
-:root {
-  --primary: #007bff;
-  --primary-hover: #0056b3;
-  --gray-bg: #f4f5f7;
-  --border-color: #ccc;
-  --font: 'Segoe UI', Tahoma, sans-serif;
-  --btn-gray: #6c757d;
-  --btn-gray-hover: #5a6268;
-  --btn-red: #dc3545;
-  --btn-red-hover: #b02a37;
-}
-body {
-  font-family: var(--font);
-  background: var(--gray-bg);
-  margin: 0;
-  padding: 30px;
-}
-.section {
-  background: white;
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto 24px auto;
-  border-radius: 12px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
-}
-h2 {
-  font-size: 20px;
-  margin-bottom: 16px;
-  font-weight: bold;
-}
-.btn {
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 6px 12px;
-  color: white;
-  margin: 4px 6px 4px 0;
-}
-.btn-primary { background-color: var(--primary); }
-.btn-primary:hover { background-color: var(--primary-hover); }
-.btn-gray { background-color: var(--btn-gray); }
-.btn-gray:hover { background-color: var(--btn-gray-hover); }
-.btn-red { background-color: var(--btn-red); }
-.btn-red:hover { background-color: var(--btn-red-hover); }
-
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 12px;
-}
-th, td {
-  border-bottom: 1px solid var(--border-color);
-  padding: 10px;
-  text-align: left;
-  background-color: white;
-}
-th {
-  background-color: #f1f1f1;
-  font-weight: bold;
-}
-th.required::after {
-  content: " *";
-  color: var(--btn-red);
-}
-input, select {
-  width: 100%;
-  padding: 5px;
-  box-sizing: border-box;
-  border: 1px solid #999;
-  border-radius: 4px;
-}
-.invalid-hours {
-  border: 1px solid var(--btn-red);
-  background-color: #ffe5e5;
-}
-#entry-controls {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-bottom: 8px;
-}
-#entry-footer {
-  margin-top: 10px;
-}
-.hidden { display: none; }
-.group-section { margin-bottom: 20px; }
-.week-header td { background-color: #f1f1f1; font-weight: bold; }
-.total-row { background-color: #e6f0fa; font-weight: bold; }
-#signin-container { text-align: center; margin-top: 100px; }
-</style>
+    :root {
+      --primary: #007bff;
+      --primary-hover: #0056b3;
+      --gray-bg: #f8f9fa;
+      --border-color: #ced4da;
+      --font: 'Segoe UI', Tahoma, sans-serif;
+      --btn-gray: #6c757d;
+      --btn-gray-hover: #5a6268;
+      --btn-red: #dc3545;
+      --btn-red-hover: #b02a37;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--gray-bg);
+      margin: 0;
+      padding: 30px;
+    }
+    .section {
+      background: white;
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto 24px auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+    .btn {
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 8px 14px;
+      color: white;
+      margin: 6px 6px 6px 0;
+    }
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-gray { background-color: var(--btn-gray); }
+    .btn-gray:hover { background-color: var(--btn-gray-hover); }
+    .btn-red { background-color: var(--btn-red); }
+    .btn-red:hover { background-color: var(--btn-red-hover); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      text-align: left;
+    }
+    th.required::after {
+      content: " *";
+      color: var(--btn-red);
+    }
+    input, select {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    .invalid-hours {
+      border: 1px solid var(--btn-red);
+      background-color: #ffe5e5;
+    }
+    .hidden { display: none; }
+    .group-section { margin-bottom: 20px; }
+    .week-header td { background-color: #f1f1f1; font-weight: bold; }
+    .total-row { background-color: #e6f0fa; font-weight: bold; }
+    #signin-container { text-align: center; margin-top: 100px; }
+  </style>
 </head>
 <body>
   <!-- Sign-in Screen -->
@@ -112,29 +90,26 @@ input, select {
 
   <!-- Main UI -->
   <div id="main-ui" class="hidden">
-    <div id="entry-controls">
-    <button class="btn btn-primary" onclick="addRow()">Add Time</button>
-  </div>
+    <div class="section">
+      <h2>Time Entry</h2>
+      <button class="btn btn-primary" onclick="addRow()">Add Time</button>
+      <table>
+        <thead>
+          <tr>
+            <th class="required">Name</th>
+            <th class="required">Date</th>
+            <th class="required">Task</th>
+            <th class="required">Hours</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="entryBody"></tbody>
+      </table>
+      <button class="btn btn-primary" onclick="saveAll()">Save All</button>
+      <button class="btn btn-red" onclick="removeAll()">Remove All</button>
+    </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th class="required">Name</th>
-        <th class="required">Date</th>
-        <th class="required">Task</th>
-        <th class="required">Hours</th>
-        <th>Notes</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="entryBody"></tbody>
-  </table>
-
-  <div id="entry-footer">
-    <button class="btn btn-primary" onclick="saveAll()">Save All</button>
-    <button class="btn btn-red" onclick="removeAll()">Remove All</button>
-  </div>
-    
     <div class="section">
       <h2>Current Entries</h2>
       <div id="currentEntriesContainer"></div>
