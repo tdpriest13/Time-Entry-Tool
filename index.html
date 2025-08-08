@@ -156,6 +156,8 @@
         const data = await response.json();
 
         document.getElementById('currentEntriesContainer').innerHTML = ''; // clear existing
+Object.keys(entryGroups).forEach(k => delete entryGroups[k]); // clear cached groups
+
         data.value.forEach(item => {
           const f = item.fields;
           moveToCurrent({
@@ -334,3 +336,4 @@
   </script>
 </body>
 </html>
+
