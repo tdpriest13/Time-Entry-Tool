@@ -173,10 +173,10 @@
       const inputs = row.querySelectorAll("input");
       addRow({
         Title: inputs[0].value,
-        date: inputs[1].value,
-        task: inputs[2].value,
-        hours: inputs[3].value,
-        notes: inputs[4].value
+        Date: inputs[1].value,
+        Task: inputs[2].value,
+        Hours: inputs[3].value,
+        Notes: inputs[4].value
       });
     }
 
@@ -212,6 +212,7 @@
         Hours: parseFloat(inputs[3].value),
         Notes: inputs[4].value
       };
+console.log("Submitting data to SharePoint:", data);
 
       try {
         await fetch("https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items", {
@@ -315,6 +316,7 @@
   </script>
 </body>
 </html>
+
 
 
 
