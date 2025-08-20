@@ -15,6 +15,8 @@
       --btn-gray-hover: #5a6268;
       --btn-red: #dc3545;
       --btn-red-hover: #b02a37;
+      --edit-bg: #fffbe6;
+      --edit-border: #ffe58f;
     }
     body {
       font-family: var(--font);
@@ -30,10 +32,7 @@
       border-radius: 10px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-    h2 {
-      font-size: 22px;
-      margin-bottom: 16px;
-    }
+    h2 { font-size: 22px; margin-bottom: 16px; }
     .btn {
       border: none;
       border-radius: 6px;
@@ -59,11 +58,9 @@
       border: 1px solid var(--border-color);
       padding: 10px;
       text-align: left;
+      vertical-align: top;
     }
-    th.required::after {
-      content: " *";
-      color: var(--btn-red);
-    }
+    th.required::after { content: " *"; color: var(--btn-red); }
     input, select {
       width: 100%;
       padding: 6px;
@@ -73,12 +70,15 @@
       border: 1px solid var(--btn-red);
       background-color: #ffe5e5;
     }
+    .hidden { display: none; }
     .group-section { margin-bottom: 20px; }
     .week-header td { background-color: #f1f1f1; font-weight: bold; }
     .total-row { background-color: #e6f0fa; font-weight: bold; }
     #signin-container { text-align: center; margin-top: 100px; }
-    .hidden { display: none; }
-    .editing { background-color: #fff3cd !important; }
+    .editing-row {
+      background: var(--edit-bg);
+      outline: 2px solid var(--edit-border);
+    }
   </style>
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 </head>
@@ -118,6 +118,8 @@
   </div>
 
   <script>
+    // ---------- MSAL setup (with localStorage + proactive refresh) ----------
+    const SCOPES = ["User.Read", "Sites.ReadWrite.All"];
     const msalInstance = new msal.PublicClientApplication({
       auth: {
         clientId: "abe43417-4888-481d-8e63-c335313a3eac",
@@ -125,56 +127,161 @@
         redirectUri: "https://tdpriest13.github.io/Time-Entry-Tool/"
       },
       cache: {
-        cacheLocation: "sessionStorage",
-        storeAuthStateInCookie: false
+        cacheLocation: "localStorage",
+        storeAuthStateInCookie: true
       }
     });
 
     let accessToken = null;
-    const entryGroups = {};
+    let refreshTimerId = null;
+
+    function setSession(tokenResponse) {
+      accessToken = tokenResponse.accessToken;
+      scheduleProactiveRefresh(tokenResponse);
+    }
+
+    function scheduleProactiveRefresh(tokenResponse) {
+      if (!tokenResponse || !tokenResponse.expiresOn) return;
+      if (refreshTimerId) clearTimeout(refreshTimerId);
+
+      const expiresAt = new Date(tokenResponse.expiresOn).getTime();
+      const now = Date.now();
+      const bufferMs = 5 * 60 * 1000; // refresh ~5 mins early
+      let delay = Math.max(30 * 1000, expiresAt - now - bufferMs);
+      delay = Math.min(delay, 50 * 60 * 1000);
+      refreshTimerId = setTimeout(refreshAccessToken, delay);
+    }
+
+    async function refreshAccessToken() {
+      const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+      if (!account) return;
+      try {
+        const tokenResponse = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account });
+        setSession(tokenResponse);
+      } catch (err) {
+        if (err && String(err.errorCode || "").includes("interaction_required")) {
+          try {
+            const tokenResponse = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account });
+            setSession(tokenResponse);
+          } catch (e) {
+            console.warn("Interactive token refresh failed:", e);
+          }
+        } else {
+          console.warn("Silent token refresh failed:", err);
+        }
+      }
+    }
 
     async function signIn() {
       try {
-        const result = await msalInstance.loginPopup({ scopes: ["User.Read", "Sites.ReadWrite.All"] });
-
-        // FIX: remember the signed-in account
-        msalInstance.setActiveAccount(result.account);
-
-        const tokenResponse = await msalInstance.acquireTokenSilent({
-          scopes: ["Sites.ReadWrite.All"],
-          account: result.account
-        });
-        accessToken = tokenResponse.accessToken;
-
-        document.getElementById("signin-container").classList.add("hidden");
-        document.getElementById("main-ui").classList.remove("hidden");
-
-        addRow();
-        loadCurrentEntriesFromSharePoint();
+        const loginResp = await msalInstance.loginPopup({ scopes: SCOPES });
+        msalInstance.setActiveAccount(loginResp.account);
+        const tokenResp = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: loginResp.account });
+        setSession(tokenResp);
+        showMainUI();
       } catch (err) {
         console.error("Sign-in failed", err);
         alert("Sign-in failed. Please try again.");
       }
     }
 
+    async function silentSignIn() {
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        try {
+          msalInstance.setActiveAccount(accounts[0]);
+          const tokenResp = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: accounts[0] });
+          setSession(tokenResp);
+          showMainUI();
+        } catch (err) {
+          // Expected if no active SSO; user can click Sign In
+          console.log("Silent sign-in not available; awaiting user action.");
+        }
+      }
+    }
+
+    function showMainUI() {
+      document.getElementById("signin-container").classList.add("hidden");
+      document.getElementById("main-ui").classList.remove("hidden");
+      addRow();
+      loadCurrentEntriesFromSharePoint();
+    }
+
+    window.onload = async () => {
+      // In case redirects are ever used; safe with popup flows.
+      try { await msalInstance.handleRedirectPromise(); } catch {}
+      silentSignIn();
+    };
+
+    // ---------- App logic (SharePoint + UI) ----------
+    const SITE_PATH = "netorgft5961137.sharepoint.com:/sites/NewBalance984:";
+    const LIST_NAME = "TimeEntries";
+    const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+    const entryGroups = {};
+    let currentEditingRow = null; // only allow a single edit row at a time
+
+    async function graphGET(path) {
+      const res = await fetch(`${GRAPH_BASE}${path}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+      return res.json();
+    }
+
+    async function graphPOST(path, body) {
+      const res = await fetch(`${GRAPH_BASE}${path}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`POST ${path} failed: ${res.status} ${t}`);
+      }
+      return res.json();
+    }
+
+    async function graphPATCH(path, body) {
+      const res = await fetch(`${GRAPH_BASE}${path}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`PATCH ${path} failed: ${res.status} ${t}`);
+      }
+      return res.json().catch(() => ({}));
+    }
+
+    async function graphDELETE(path) {
+      const res = await fetch(`${GRAPH_BASE}${path}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`DELETE ${path} failed: ${res.status} ${t}`);
+      }
+    }
+
     async function loadCurrentEntriesFromSharePoint() {
       try {
-        const response = await fetch(
-          "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items?expand=fields",
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${accessToken}` }
-          }
-        );
-        const data = await response.json();
+        const data = await graphGET(`/sites/${SITE_PATH}/lists/${LIST_NAME}/items?expand=fields`);
+        // Clear UI + cache
+        document.getElementById('currentEntriesContainer').innerHTML = '';
+        Object.keys(entryGroups).forEach(k => delete entryGroups[k]);
 
-        document.getElementById('currentEntriesContainer').innerHTML = ''; 
-        Object.keys(entryGroups).forEach(k => delete entryGroups[k]); 
-
-        data.value.forEach(item => {
-          const f = item.fields;
+        (data.value || []).forEach(item => {
+          const f = item.fields || {};
           moveToCurrent({
-            id: item.id,
+            itemId: item.id,
             name: f.Name || "",
             date: f.Date || "",
             task: f.Task || "",
@@ -198,8 +305,8 @@
         <td><input type="text" value="${data.notes || ''}"></td>
         <td>
           <button class="btn btn-primary btn-sm" onclick="saveRow(this)">Save</button>
-          <button class="btn btn-gray btn-sm" onclick="copyRow(this)">Copy</button>
-          <button class="btn btn-red btn-sm" onclick="removeRow(this)">Remove</button>
+          <button class="btn btn-gray  btn-sm" onclick="copyRow(this)">Copy</button>
+          <button class="btn btn-red   btn-sm" onclick="removeRow(this)">Remove</button>
         </td>`;
       table.appendChild(row);
     }
@@ -232,58 +339,6 @@
       addRow();
     }
 
-    async function saveRow(btn) {
-      const row = btn.closest("tr");
-      if (!validateRow(row)) return;
-
-      const inputs = row.querySelectorAll("input");
-      const data = {
-        Name: inputs[0].value,
-        Date: inputs[1].value,
-        Task: inputs[2].value,
-        Hours: parseFloat(inputs[3].value),
-        Notes: inputs[4].value
-      };
-
-      try {
-        const response = await fetch(
-          "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ fields: data })
-          }
-        );
-
-        if (!response.ok) throw new Error(await response.text());
-        const saved = await response.json();
-
-        row.remove();
-        if (!document.querySelector("#entryBody tr")) addRow();
-
-        moveToCurrent({
-          id: saved.id,
-          name: data.Name,
-          date: data.Date,
-          task: data.Task,
-          hours: data.Hours,
-          notes: data.Notes
-        });
-      } catch (err) {
-        console.error("Failed to save to SharePoint", err);
-        alert("Save failed");
-      }
-    }
-
-    function saveAll() {
-      [...document.querySelectorAll('#entryBody tr')].forEach(row => {
-        saveRow(row.querySelector('button'));
-      });
-    }
-
     function validateRow(row) {
       let valid = true;
       row.querySelectorAll("input").forEach(input => {
@@ -293,6 +348,50 @@
       return valid;
     }
 
+    // Save one row (can be called by button or directly with a row)
+    async function saveRow(btnOrRow) {
+      const row = btnOrRow.closest ? btnOrRow.closest("tr") : btnOrRow;
+      if (!validateRow(row)) return;
+
+      const inputs = row.querySelectorAll("input");
+      const payload = {
+        Name: inputs[0].value,
+        Date: inputs[1].value,
+        Task: inputs[2].value,
+        Hours: parseFloat(inputs[3].value),
+        Notes: inputs[4].value
+      };
+
+      try {
+        const created = await graphPOST(`/sites/${SITE_PATH}/lists/${LIST_NAME}/items`, { fields: payload });
+        // remove draft row and ensure at least one empty row remains
+        row.remove();
+        if (!document.querySelector("#entryBody tr")) addRow();
+
+        // reflect new item in Current Entries immediately
+        moveToCurrent({
+          itemId: created.id,
+          name: payload.Name,
+          date: payload.Date,
+          task: payload.Task,
+          hours: payload.Hours,
+          notes: payload.Notes
+        });
+      } catch (err) {
+        console.error("Failed to save to SharePoint", err);
+        alert("Save failed");
+      }
+    }
+
+    async function saveAll() {
+      // snapshot rows to avoid live NodeList issues as we remove rows
+      const rows = Array.from(document.querySelectorAll('#entryBody tr'));
+      for (const row of rows) {
+        await saveRow(row);
+      }
+    }
+
+    // ----- Current Entries rendering, totals, edit/delete -----
     function moveToCurrent(data) {
       const weekLabel = getWeekLabel(data.date);
 
@@ -318,16 +417,17 @@
 
       const tbody = entryGroups[data.name].weeks[weekLabel];
       const tr = document.createElement('tr');
-      tr.dataset.id = data.id;
+      if (data.itemId) tr.dataset.itemId = data.itemId;
+
       tr.innerHTML = `
-        <td>${data.name}</td>
-        <td>${data.date}</td>
-        <td>${data.task}</td>
-        <td>${data.hours.toFixed(2)}</td>
-        <td>${data.notes}</td>
-        <td>
-          <button class="btn btn-primary btn-sm" onclick="editCurrentRow(this)">Edit</button>
-          <button class="btn btn-red btn-sm" onclick="deleteCurrentRow(this)">Delete</button>
+        <td class="name">${data.name}</td>
+        <td class="date">${data.date}</td>
+        <td class="task">${data.task}</td>
+        <td class="hours">${Number(data.hours).toFixed(2)}</td>
+        <td class="notes">${data.notes || ""}</td>
+        <td class="actions">
+          <button class="btn btn-gray btn-sm" onclick="enterEditMode(this)">Edit</button>
+          <button class="btn btn-red btn-sm" onclick="deleteItem(this)">Delete</button>
         </td>`;
       tbody.appendChild(tr);
       updateTotal(data.name, weekLabel);
@@ -337,7 +437,10 @@
       const tbody = entryGroups[name].weeks[weekLabel];
       let total = 0;
       const rows = [...tbody.querySelectorAll('tr')].filter(r => !r.classList.contains('week-header') && !r.classList.contains('total-row'));
-      rows.forEach(r => total += parseFloat(r.children[3].textContent));
+      rows.forEach(r => {
+        const hrs = parseFloat(r.querySelector('.hours')?.textContent || "0");
+        total += isNaN(hrs) ? 0 : hrs;
+      });
       let totalRow = tbody.querySelector('.total-row');
       if (!totalRow) {
         totalRow = document.createElement('tr');
@@ -349,6 +452,148 @@
       }
     }
 
+    async function deleteItem(btn) {
+      const tr = btn.closest('tr');
+      const itemId = tr.dataset.itemId;
+      if (!itemId) return alert("Missing item id.");
+
+      if (!confirm("Delete this entry?")) return;
+
+      try {
+        await graphDELETE(`/sites/${SITE_PATH}/lists/${LIST_NAME}/items/${itemId}`);
+        const name = tr.querySelector('.name').textContent;
+        const date = tr.querySelector('.date').textContent;
+        const weekLabel = getWeekLabel(date);
+        tr.remove();
+        updateTotal(name, weekLabel);
+      } catch (err) {
+        console.error("Delete failed:", err);
+        alert("Failed to delete entry.");
+      }
+    }
+
+    function enterEditMode(btn) {
+      const tr = btn.closest('tr');
+      if (currentEditingRow && currentEditingRow !== tr) {
+        alert("Finish or cancel the current edit before editing another entry.");
+        return;
+      }
+      currentEditingRow = tr;
+      tr.classList.add("editing-row");
+
+      const name = tr.querySelector('.name').textContent;
+      const date = tr.querySelector('.date').textContent;
+      const task = tr.querySelector('.task').textContent;
+      const hours = tr.querySelector('.hours').textContent;
+      const notes = tr.querySelector('.notes').textContent;
+
+      tr.querySelector('.name').innerHTML  = `<input type="text" value="${escapeHtml(name)}" required>`;
+      tr.querySelector('.date').innerHTML  = `<input type="date" value="${escapeHtml(date)}" required>`;
+      tr.querySelector('.task').innerHTML  = `<input type="text" value="${escapeHtml(task)}" required>`;
+      tr.querySelector('.hours').innerHTML = `<input type="number" step="0.25" min="0" value="${Number(hours)}" oninput="validateHours(this)">`;
+      tr.querySelector('.notes').innerHTML = `<input type="text" value="${escapeHtml(notes)}">`;
+
+      const actions = tr.querySelector('.actions');
+      actions.innerHTML = `
+        <button class="btn btn-primary btn-sm" onclick="saveEdit(this)">Save</button>
+        <button class="btn btn-red btn-sm" onclick="cancelEdit(this, '${escapeAttr(name)}', '${escapeAttr(date)}', '${escapeAttr(task)}', '${escapeAttr(hours)}', '${escapeAttr(notes)}')">Cancel</button>
+      `;
+    }
+
+    function cancelEdit(btn, origName, origDate, origTask, origHours, origNotes) {
+      const tr = btn.closest('tr');
+      const itemId = tr.dataset.itemId;
+      tr.classList.remove("editing-row");
+      currentEditingRow = null;
+
+      tr.querySelector('.name').textContent  = origName;
+      tr.querySelector('.date').textContent  = origDate;
+      tr.querySelector('.task').textContent  = origTask;
+      tr.querySelector('.hours').textContent = Number(origHours).toFixed(2);
+      tr.querySelector('.notes').textContent = origNotes || "";
+
+      tr.querySelector('.actions').innerHTML = `
+        <button class="btn btn-gray btn-sm" onclick="enterEditMode(this)">Edit</button>
+        <button class="btn btn-red btn-sm" onclick="deleteItem(this)">Delete</button>
+      `;
+      if (itemId) tr.dataset.itemId = itemId;
+    }
+
+    async function saveEdit(btn) {
+      const tr = btn.closest('tr');
+      const itemId = tr.dataset.itemId;
+      if (!itemId) return alert("Missing item id.");
+
+      const inputs = {
+        name:  tr.querySelector('.name  input'),
+        date:  tr.querySelector('.date  input'),
+        task:  tr.querySelector('.task  input'),
+        hours: tr.querySelector('.hours input'),
+        notes: tr.querySelector('.notes input')
+      };
+
+      // Validate
+      let ok = true;
+      if (!inputs.name.value) ok = false;
+      if (!inputs.date.value) ok = false;
+      const hoursVal = parseFloat(inputs.hours.value);
+      if (!(hoursVal > 0 && hoursVal <= 24 && hoursVal % 0.25 === 0)) ok = false;
+      if (!ok) return alert("Please complete required fields with valid values.");
+
+      const updatedFields = {
+        Name:  inputs.name.value,
+        Date:  inputs.date.value,
+        Task:  inputs.task.value,
+        Hours: hoursVal,
+        Notes: inputs.notes.value
+      };
+
+      try {
+        await graphPATCH(`/sites/${SITE_PATH}/lists/${LIST_NAME}/items/${itemId}/fields`, updatedFields);
+
+        // Commit UI
+        const oldName = tr.querySelector('.name').textContent; // before we replace, capture for total recompute
+        const oldDate = tr.querySelector('.date').textContent;
+        const oldWeek = getWeekLabel(oldDate);
+
+        tr.querySelector('.name').textContent  = updatedFields.Name;
+        tr.querySelector('.date').textContent  = updatedFields.Date;
+        tr.querySelector('.task').textContent  = updatedFields.Task;
+        tr.querySelector('.hours').textContent = Number(updatedFields.Hours).toFixed(2);
+        tr.querySelector('.notes').textContent = updatedFields.Notes || "";
+
+        tr.querySelector('.actions').innerHTML = `
+          <button class="btn btn-gray btn-sm" onclick="enterEditMode(this)">Edit</button>
+          <button class="btn btn-red btn-sm" onclick="deleteItem(this)">Delete</button>
+        `;
+
+        tr.classList.remove("editing-row");
+        currentEditingRow = null;
+
+        // If date changed, we may need to move the row between week groups
+        const newWeek = getWeekLabel(updatedFields.Date);
+        if (newWeek !== oldWeek || updatedFields.Name !== oldName) {
+          // Remove and re-add using moveToCurrent so it's grouped correctly
+          tr.remove();
+          updateTotal(oldName, oldWeek);
+          moveToCurrent({
+            itemId,
+            name: updatedFields.Name,
+            date: updatedFields.Date,
+            task: updatedFields.Task,
+            hours: updatedFields.Hours,
+            notes: updatedFields.Notes
+          });
+        } else {
+          // Recompute total within same group
+          updateTotal(updatedFields.Name, newWeek);
+        }
+      } catch (err) {
+        console.error("Update failed:", err);
+        alert("Failed to update entry.");
+      }
+    }
+
     function getWeekLabel(dateStr) {
       const d = new Date(dateStr);
       const start = new Date(d);
@@ -357,10 +602,18 @@
       end.setDate(start.getDate() + 6);
       return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
     }
-    window.onload = () => {
-      silentSignIn();
-    };
+
+    // Simple escaping helpers for inline edit inputs
+    function escapeHtml(s) {
+      return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+    function escapeAttr(s) {
+      return escapeHtml(s).replace(/'/g, "&#39;");
+    }
   </script>
 </body>
 </html>
-
