@@ -569,7 +569,7 @@
     <div class="signin-icon">⏱</div>
     <h1>Time Entry Tool</h1>
     <p class="subtitle">Track your time with ease and efficiency</p>
-    <button class="btn btn-primary btn-lg" onclick="signIn()">
+    <button id="signin-btn" class="btn btn-primary btn-lg">
       <span>Sign In with Microsoft</span>
     </button>
   </div>
@@ -583,15 +583,15 @@
       </h2>
 
       <div class="actions-toolbar">
-        <button class="btn btn-primary" onclick="addRow()">
+        <button id="add-time-btn" class="btn btn-primary">
           <span>+</span>
           Add Time Entry
         </button>
-        <button class="btn btn-success" onclick="saveAll()">
+        <button id="save-all-btn" class="btn btn-success">
           <span>💾</span>
           Save All
         </button>
-        <button class="btn btn-danger" onclick="removeAll()">
+        <button id="remove-all-btn" class="btn btn-danger">
           <span>🗑</span>
           Clear All
         </button>
@@ -768,11 +768,32 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (typeof msal === 'undefined') {
     console.error('❌ MSAL library failed to load from CDN');
-    const signInBtn = document.querySelector('#signin-container .btn');
+    const signInBtn = document.getElementById('signin-btn');
     if (signInBtn) {
       signInBtn.innerHTML = '<span>❌</span> Authentication library failed to load';
       signInBtn.disabled = true;
     }
+  }
+  
+  // Set up event listeners
+  const signInBtn = document.getElementById('signin-btn');
+  if (signInBtn) {
+    signInBtn.addEventListener('click', signIn);
+  }
+  
+  const addTimeBtn = document.getElementById('add-time-btn');
+  if (addTimeBtn) {
+    addTimeBtn.addEventListener('click', () => addRow());
+  }
+  
+  const saveAllBtn = document.getElementById('save-all-btn');
+  if (saveAllBtn) {
+    saveAllBtn.addEventListener('click', saveAll);
+  }
+  
+  const removeAllBtn = document.getElementById('remove-all-btn');
+  if (removeAllBtn) {
+    removeAllBtn.addEventListener('click', removeAll);
   }
 });
 
