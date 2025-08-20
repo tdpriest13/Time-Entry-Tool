@@ -357,6 +357,10 @@
       end.setDate(start.getDate() + 6);
       return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
     }
+    window.onload = () => {
+      silentSignIn();
+    };
   </script>
 </body>
 </html>
+
