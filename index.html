@@ -696,12 +696,31 @@ function setLoading(element, isLoading) {
    Sign in + load data
    =========================================================== */
 async function signIn(){
+  console.log('🔍 Sign-in process started...');
   const signInBtn = document.querySelector('#signin-container .btn');
+  
+  // Debug checks
+  console.log('🔍 MSAL library loaded:', typeof msal !== 'undefined');
+  console.log('🔍 msalInstance created:', !!msalInstance);
+  console.log('🔍 tokenRequest:', tokenRequest);
+  
+  // Check if MSAL is available
+  if (typeof msal === 'undefined') {
+    console.error('❌ MSAL library not loaded');
+    showToast('Authentication library failed to load. Please refresh the page.', 'error');
+    return;
+  }
+  
   setLoading(signInBtn, true);
   
   try {
+    console.log('🔍 Attempting popup login...');
     const loginResult = await msalInstance.loginPopup(tokenRequest);
+    console.log('✅ Login successful:', loginResult);
+    
+    console.log('🔍 Acquiring token silently...');
     const tokenResp = await msalInstance.acquireTokenSilent({ ...tokenRequest, account: loginResult.account });
+    console.log('✅ Token acquired');
     accessToken = tokenResp.accessToken;
 
     document.getElementById('signin-container').classList.add('hidden');
@@ -711,9 +730,14 @@ async function signIn(){
     addRow(); // show one blank row
     await loadCurrentEntriesFromSharePoint();
   } catch(err){
+    console.error('❌ Sign-in error details:', err);
+    console.log('🔍 Error code:', err.errorCode);
+    console.log('🔍 Error message:', err.errorMessage);
+    
     // If acquireTokenSilent fails (consent or other), attempt interactive for required scopes
     if (err && err.errorCode === "consent_required"){
       try {
+        console.log('🔍 Attempting interactive consent...');
         const popupResp = await msalInstance.acquireTokenPopup(tokenRequest);
         accessToken = popupResp.accessToken;
         document.getElementById('signin-container').classList.add('hidden');
@@ -723,16 +747,34 @@ async function signIn(){
         await loadCurrentEntriesFromSharePoint();
         return;
       } catch(e){
-        console.error('Interactive consent failed', e);
+        console.error('❌ Interactive consent failed', e);
         showToast('Sign-in failed. Please try again.', 'error');
       }
+    } else if (err.errorCode === 'popup_window_error' || err.errorMessage?.includes('popup')) {
+      showToast('Popup blocked. Please allow popups for this site and try again.', 'error');
+    } else {
+      showToast(`Sign-in failed: ${err.errorMessage || 'Please check your connection and try again.'}`, 'error');
     }
-    console.error('Sign-in error', err);
-    showToast('Sign-in failed. Please check your connection and try again.', 'error');
   } finally {
     setLoading(signInBtn, false);
   }
 }
+
+// Add initialization check when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔍 Page loaded, checking MSAL initialization...');
+  console.log('🔍 MSAL available:', typeof msal !== 'undefined');
+  console.log('🔍 msalInstance:', !!msalInstance);
+  
+  if (typeof msal === 'undefined') {
+    console.error('❌ MSAL library failed to load from CDN');
+    const signInBtn = document.querySelector('#signin-container .btn');
+    if (signInBtn) {
+      signInBtn.innerHTML = '<span>❌</span> Authentication library failed to load';
+      signInBtn.disabled = true;
+    }
+  }
+});
 
 /* ===========================================================
    Read from SharePoint (Graph)
