@@ -3,105 +3,628 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Time Entry Tool - Full CRUD</title>
+  <title>Time Entry Tool - Enhanced UI</title>
 
   <!-- MSAL -->
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 
   <style>
     :root {
-      --primary: #007bff;
-      --primary-hover: #0056b3;
-      --gray-bg: #f8f9fa;
-      --border-color: #ced4da;
-      --font: 'Segoe UI', Tahoma, sans-serif;
-      --btn-gray: #6c757d;
-      --btn-gray-hover: #5a6268;
-      --btn-red: #dc3545;
-      --btn-red-hover: #b02a37;
-      --edit-bg: #fff3cd;
+      /* Modern Color Palette */
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-light: #dbeafe;
+      --secondary: #64748b;
+      --secondary-hover: #475569;
+      --success: #10b981;
+      --success-hover: #059669;
+      --warning: #f59e0b;
+      --warning-hover: #d97706;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --danger-light: #fee2e2;
+      
+      /* Neutrals */
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+      
+      /* Typography */
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      
+      /* Shadows */
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      
+      /* Border Radius */
+      --radius-sm: 0.375rem;
+      --radius: 0.5rem;
+      --radius-md: 0.75rem;
+      --radius-lg: 1rem;
+      --radius-xl: 1.5rem;
+      
+      /* Transitions */
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-fast: all 0.15s ease-out;
     }
-    body { font-family: var(--font); background: var(--gray-bg); margin:0; padding:30px; }
+    
+    /* Import Inter font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body { 
+      font-family: var(--font-sans); 
+      background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+      margin: 0; 
+      padding: 20px; 
+      line-height: 1.6;
+      color: var(--gray-700);
+      min-height: 100vh;
+    }
+
+    /* Loading States */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* Section Cards */
     .section {
       background: white;
-      padding: 24px;
-      max-width: 1200px;
-      margin: 0 auto 24px auto;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 32px;
+      max-width: 1400px;
+      margin: 0 auto 32px auto;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--gray-200);
+      transition: var(--transition);
     }
-    h2 { font-size:22px; margin-bottom:12px; }
-    .btn {
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      padding: 8px 14px;
-      color: white;
-      margin: 6px 6px 6px 0;
-    }
-    .btn-primary{ background:var(--primary); } .btn-primary:hover{ background:var(--primary-hover); }
-    .btn-gray{ background:var(--btn-gray);} .btn-gray:hover{ background:var(--btn-gray-hover); }
-    .btn-red{ background:var(--btn-red);} .btn-red:hover{ background:var(--btn-red-hover); }
 
-    table{ width:100%; border-collapse:collapse; margin-bottom:10px; }
-    th, td{ border:1px solid var(--border-color); padding:10px; text-align:left; vertical-align:middle; }
-    th.required::after { content: " *"; color: var(--btn-red); }
-    input, select { width:100%; padding:6px; box-sizing:border-box; }
-    .invalid-hours { border:1px solid var(--btn-red); background:#ffe5e5; }
-    .group-section { margin-bottom:20px; }
-    .week-header td { background:#f1f1f1; font-weight:bold; }
-    .total-row { background:#e6f0fa; font-weight:bold; }
-    #signin-container { text-align:center; margin-top:100px; }
-    .hidden { display:none; }
-    tr.editing { background: var(--edit-bg) !important; }
-    .actions-inline button { margin-right:6px; }
-    /* small screens: allow controls to wrap */
-    @media (max-width:720px){
-      .actions-inline button{ display:block; margin-bottom:6px; }
+    .section:hover {
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      color: var(--gray-900);
+    }
+
+    h2 { 
+      font-size: 1.875rem; 
+      font-weight: 600;
+      margin: 0 0 24px 0; 
+      color: var(--gray-800);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: var(--gray-500);
+      margin-bottom: 32px;
+    }
+
+    /* Enhanced Button System */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+      padding: 12px 20px;
+      transition: var(--transition);
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-sm {
+      padding: 8px 12px;
+      font-size: 0.8125rem;
+    }
+
+    .btn-lg {
+      padding: 16px 24px;
+      font-size: 1rem;
+    }
+
+    /* Button Variants */
+    .btn-primary { 
+      background: var(--primary); 
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    .btn-primary:hover:not(:disabled) { 
+      background: var(--primary-hover); 
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-secondary { 
+      background: var(--gray-100); 
+      color: var(--gray-700);
+      border: 1px solid var(--gray-300);
+    }
+    .btn-secondary:hover:not(:disabled) { 
+      background: var(--gray-200); 
+      border-color: var(--gray-400);
+    }
+
+    .btn-success { 
+      background: var(--success); 
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    .btn-success:hover:not(:disabled) { 
+      background: var(--success-hover); 
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-danger { 
+      background: var(--danger); 
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    .btn-danger:hover:not(:disabled) { 
+      background: var(--danger-hover); 
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray-600);
+      border: 1px solid transparent;
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--gray-100);
+      color: var(--gray-700);
+    }
+
+    /* Enhanced Table Styling */
+    .table-container {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 0.875rem;
+    }
+
+    th, td { 
+      padding: 16px 20px; 
+      text-align: left; 
+      vertical-align: middle;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    th {
+      background: var(--gray-50);
+      font-weight: 600;
+      color: var(--gray-700);
+      font-size: 0.8125rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th.required::after { 
+      content: " *"; 
+      color: var(--danger); 
+      font-weight: 700;
+    }
+
+    tbody tr:hover {
+      background: var(--gray-50);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Enhanced Form Inputs */
+    .input-group {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--gray-700);
+      margin-bottom: 8px;
+    }
+
+    input, select, textarea { 
+      width: 100%; 
+      padding: 12px 16px; 
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      transition: var(--transition);
+      background: white;
+      color: var(--gray-700);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    input:invalid, select:invalid {
+      border-color: var(--danger);
+      background: var(--danger-light);
+    }
+
+    .invalid-hours { 
+      border-color: var(--danger) !important;
+      background: var(--danger-light) !important;
+      animation: shake 0.3s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius);
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .status-warning {
+      background: var(--warning);
+      color: white;
+    }
+
+    .status-error {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* Enhanced Group Sections */
+    .group-section {
+      margin-bottom: 32px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: white;
+    }
+
+    .group-section summary {
+      padding: 20px 24px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .group-section summary:hover {
+      background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+    }
+
+    .group-section[open] summary {
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .group-weeks {
+      padding: 24px;
+    }
+
+    .week-header td { 
+      background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+      font-weight: 600;
+      color: var(--gray-700);
+      border-top: 2px solid var(--primary);
+    }
+
+    .total-row { 
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 10%);
+      font-weight: 600;
+      color: var(--primary-hover);
+    }
+
+    /* Edit Mode Styling */
+    tr.editing { 
+      background: linear-gradient(135deg, var(--warning) 0%, rgba(245, 158, 11, 0.1) 100%) !important;
+      border: 2px solid var(--warning);
+      border-radius: var(--radius-md);
+    }
+
+    /* Sign-in Page */
+    #signin-container { 
+      text-align: center; 
+      margin-top: 10vh;
+      padding: 48px;
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid var(--gray-200);
+    }
+
+    .signin-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      color: white;
+      font-size: 24px;
+    }
+
+    /* Action Controls */
+    .actions-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: var(--gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-200);
+    }
+
+    .actions-inline {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* Utilities */
+    .hidden { display: none !important; }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--gray-500);
+    }
+
+    .empty-state-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      opacity: 0.5;
+    }
+
+    /* Toast Notifications */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 16px 20px;
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      max-width: 400px;
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.3s ease-out;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast-success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast-error {
+      border-left: 4px solid var(--danger);
+    }
+
+    .toast-warning {
+      border-left: 4px solid var(--warning);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      body { 
+        padding: 12px; 
+      }
+      
+      .section { 
+        padding: 20px; 
+        margin-bottom: 20px;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      h2 {
+        font-size: 1.5rem;
+      }
+      
+      .actions-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .actions-toolbar .btn {
+        justify-content: center;
+      }
+      
+      .actions-inline {
+        flex-direction: column;
+        gap: 4px;
+      }
+      
+      .actions-inline .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      th, td {
+        padding: 12px 16px;
+        font-size: 0.8125rem;
+      }
+      
+      .table-container {
+        overflow-x: auto;
+      }
+      
+      table {
+        min-width: 600px;
+      }
+    }
+
+    /* Dark mode support (optional) */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --gray-50: #0f172a;
+        --gray-100: #1e293b;
+        --gray-200: #334155;
+        --gray-300: #475569;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
   <!-- Sign-in -->
   <div id="signin-container">
-    <h2>Welcome to the Time Entry Tool</h2>
-    <button class="btn btn-primary" onclick="signIn()">Sign In</button>
+    <div class="signin-icon">⏱</div>
+    <h1>Time Entry Tool</h1>
+    <p class="subtitle">Track your time with ease and efficiency</p>
+    <button class="btn btn-primary btn-lg" onclick="signIn()">
+      <span>Sign In with Microsoft</span>
+    </button>
   </div>
 
   <!-- Main UI -->
   <div id="main-ui" class="hidden">
     <div class="section">
-      <h2>Time Entry</h2>
+      <h2>
+        <span>⏱</span>
+        Add Time Entry
+      </h2>
 
-      <div id="entry-controls" style="margin-bottom:8px;">
-        <button class="btn btn-primary" onclick="addRow()">Add Time</button>
+      <div class="actions-toolbar">
+        <button class="btn btn-primary" onclick="addRow()">
+          <span>+</span>
+          Add Time Entry
+        </button>
+        <button class="btn btn-success" onclick="saveAll()">
+          <span>💾</span>
+          Save All
+        </button>
+        <button class="btn btn-danger" onclick="removeAll()">
+          <span>🗑</span>
+          Clear All
+        </button>
       </div>
 
-      <table aria-label="Time Entry table">
-        <thead>
-          <tr>
-            <th class="required">Name</th>
-            <th class="required">Date</th>
-            <th class="required">Task</th>
-            <th class="required">Hours</th>
-            <th>Notes</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="entryBody"></tbody>
-      </table>
-
-      <div id="entry-footer">
-        <button class="btn btn-primary" onclick="saveAll()">Save All</button>
-        <button class="btn btn-red" onclick="removeAll()">Remove All</button>
+      <div class="table-container">
+        <table aria-label="Time Entry table">
+          <thead>
+            <tr>
+              <th class="required">Name</th>
+              <th class="required">Date</th>
+              <th class="required">Task</th>
+              <th class="required">Hours</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="entryBody"></tbody>
+        </table>
       </div>
     </div>
 
     <div class="section">
-      <h2>Current Entries</h2>
-      <div id="currentEntriesContainer"></div>
+      <h2>
+        <span>📊</span>
+        Current Entries
+      </h2>
+      <div id="currentEntriesContainer">
+        <div class="empty-state">
+          <div class="empty-state-icon">📝</div>
+          <p>No time entries yet. Add your first entry above!</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -127,9 +650,55 @@ const entryGroups = {}; // grouping for UI (name -> weeks)
 let currentlyEditingRow = null; // only one row may be edited at a time
 
 /* ===========================================================
+   Toast Notification System
+   =========================================================== */
+function showToast(message, type = 'success', duration = 3000) {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 18px;">
+        ${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}
+      </span>
+      <span>${message}</span>
+    </div>
+  `;
+  
+  document.getElementById('toast-container').appendChild(toast);
+  
+  // Show toast
+  setTimeout(() => toast.classList.add('show'), 100);
+  
+  // Hide toast
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+/* ===========================================================
+   Loading State Management
+   =========================================================== */
+function setLoading(element, isLoading) {
+  if (isLoading) {
+    element.classList.add('loading');
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner';
+    element.insertBefore(spinner, element.firstChild);
+  } else {
+    element.classList.remove('loading');
+    const spinner = element.querySelector('.spinner');
+    if (spinner) spinner.remove();
+  }
+}
+
+/* ===========================================================
    Sign in + load data
    =========================================================== */
 async function signIn(){
+  const signInBtn = document.querySelector('#signin-container .btn');
+  setLoading(signInBtn, true);
+  
   try {
     const loginResult = await msalInstance.loginPopup(tokenRequest);
     const tokenResp = await msalInstance.acquireTokenSilent({ ...tokenRequest, account: loginResult.account });
@@ -138,6 +707,7 @@ async function signIn(){
     document.getElementById('signin-container').classList.add('hidden');
     document.getElementById('main-ui').classList.remove('hidden');
 
+    showToast('Successfully signed in!', 'success');
     addRow(); // show one blank row
     await loadCurrentEntriesFromSharePoint();
   } catch(err){
@@ -148,15 +718,19 @@ async function signIn(){
         accessToken = popupResp.accessToken;
         document.getElementById('signin-container').classList.add('hidden');
         document.getElementById('main-ui').classList.remove('hidden');
+        showToast('Successfully signed in!', 'success');
         addRow();
         await loadCurrentEntriesFromSharePoint();
         return;
       } catch(e){
         console.error('Interactive consent failed', e);
+        showToast('Sign-in failed. Please try again.', 'error');
       }
     }
     console.error('Sign-in error', err);
-    alert('Sign-in failed (see console).');
+    showToast('Sign-in failed. Please check your connection and try again.', 'error');
+  } finally {
+    setLoading(signInBtn, false);
   }
 }
 
@@ -170,6 +744,7 @@ async function loadCurrentEntriesFromSharePoint(){
     if (!resp.ok){
       const e = await resp.text();
       console.error('Failed to fetch entries', resp.status, e);
+      showToast('Failed to load existing entries', 'error');
       return;
     }
     const json = await resp.json();
@@ -179,8 +754,18 @@ async function loadCurrentEntriesFromSharePoint(){
     container.innerHTML = '';
     Object.keys(entryGroups).forEach(k => delete entryGroups[k]);
 
+    if (!json.value || json.value.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📝</div>
+          <p>No time entries yet. Add your first entry above!</p>
+        </div>
+      `;
+      return;
+    }
+
     // Render each item
-    (json.value || []).forEach(item => {
+    json.value.forEach(item => {
       const f = item.fields || {};
       // support Title OR Name (Title is typical internal name)
       moveToCurrent({
@@ -192,8 +777,11 @@ async function loadCurrentEntriesFromSharePoint(){
         notes: f.Notes ?? ''
       });
     });
+
+    showToast(`Loaded ${json.value.length} time entries`, 'success');
   } catch (err){
     console.error('loadCurrentEntriesFromSharePoint error', err);
+    showToast('Failed to load entries. Please refresh and try again.', 'error');
   }
 }
 
@@ -203,16 +791,26 @@ async function loadCurrentEntriesFromSharePoint(){
 function addRow(data = {}){
   const table = document.getElementById('entryBody');
   const row = document.createElement('tr');
+  row.style.animation = 'fadeInUp 0.3s ease-out';
   row.innerHTML = `
-    <td><input type="text" value="${escapeHtml(data.name||'')}" required></td>
+    <td><input type="text" value="${escapeHtml(data.name||'')}" required placeholder="Enter your name"></td>
     <td><input type="date" value="${data.date||''}" required></td>
-    <td><input type="text" value="${escapeHtml(data.task||'')}" required></td>
-    <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)"></td>
-    <td><input type="text" value="${escapeHtml(data.notes||'')}"></td>
+    <td><input type="text" value="${escapeHtml(data.task||'')}" required placeholder="What did you work on?"></td>
+    <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)" placeholder="0.00"></td>
+    <td><input type="text" value="${escapeHtml(data.notes||'')}" placeholder="Optional notes"></td>
     <td class="actions-inline">
-      <button class="btn btn-primary btn-sm" onclick="saveRow(this)">Save</button>
-      <button class="btn btn-gray btn-sm" onclick="copyRow(this)">Copy</button>
-      <button class="btn btn-red btn-sm" onclick="removeRow(this)">Remove</button>
+      <button class="btn btn-success btn-sm" onclick="saveRow(this)">
+        <span>💾</span>
+        Save
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="copyRow(this)">
+        <span>📋</span>
+        Copy
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="removeRow(this)">
+        <span>🗑</span>
+        Remove
+      </button>
     </td>
   `;
   table.appendChild(row);
@@ -220,6 +818,22 @@ function addRow(data = {}){
   const hoursInput = row.querySelector('input[type="number"]');
   if (hoursInput) validateHours(hoursInput);
 }
+
+// Add fadeInUp animation
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+document.head.appendChild(style);
 
 function copyRow(btn){
   const row = btn.closest('tr');
@@ -231,22 +845,74 @@ function copyRow(btn){
     hours: inputs[3].value,
     notes: inputs[4].value
   });
+  showToast('Row copied!', 'success', 2000);
 }
 
 function removeRow(btn){
   const row = btn.closest('tr');
-  row.remove();
-  if (!document.querySelector('#entryBody tr')) addRow();
+  if (!confirm('Remove this entry?')) return;
+  
+  row.style.animation = 'fadeOutDown 0.3s ease-out';
+  setTimeout(() => {
+    row.remove();
+    if (!document.querySelector('#entryBody tr')) addRow();
+  }, 300);
 }
 
 function removeAll(){
-  document.getElementById('entryBody').innerHTML = '';
-  addRow();
+  if (!confirm('Remove all unsaved entries? This cannot be undone.')) return;
+  
+  const tbody = document.getElementById('entryBody');
+  Array.from(tbody.children).forEach((row, index) => {
+    setTimeout(() => {
+      row.style.animation = 'fadeOutDown 0.3s ease-out';
+      setTimeout(() => row.remove(), 300);
+    }, index * 50);
+  });
+  
+  setTimeout(() => addRow(), 500);
+  showToast('All entries cleared', 'warning');
 }
+
+// Add fadeOutDown animation
+style.textContent += `
+  @keyframes fadeOutDown {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+`;
 
 function validateHours(input){
   const val = parseFloat(input.value);
-  input.classList.toggle('invalid-hours', !(val > 0 && val <= 24 && (val * 100) % 25 === 0));
+  const isValid = val > 0 && val <= 24 && (val * 100) % 25 === 0;
+  input.classList.toggle('invalid-hours', !isValid);
+  
+  // Add validation message
+  let message = input.parentElement.querySelector('.validation-message');
+  if (!isValid && val !== 0 && !isNaN(val)) {
+    if (!message) {
+      message = document.createElement('div');
+      message.className = 'validation-message';
+      message.style.cssText = `
+        font-size: 0.75rem;
+        color: var(--danger);
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      `;
+      input.parentElement.appendChild(message);
+    }
+    message.innerHTML = '<span>⚠️</span> Hours must be 0.25-24.00 in 0.25 increments';
+  } else if (message) {
+    message.remove();
+  }
 }
 
 /* ===========================================================
@@ -258,7 +924,9 @@ async function saveRow(btn){
   if (!row || !validateRow(row)) return;
 
   // disable button to prevent double-clicks
+  setLoading(btn, true);
   btn.disabled = true;
+  
   const inputs = row.querySelectorAll('input');
   const data = {
     Title: inputs[0].value, // use Title for the list's primary text column
@@ -284,53 +952,106 @@ async function saveRow(btn){
     if (!resp.ok){
       const errBody = await resp.text();
       console.error('SharePoint POST error', resp.status, errBody);
-      alert('Save failed (see console).');
-      btn.disabled = false;
+      showToast('Failed to save entry. Please try again.', 'error');
       return;
     }
 
     const savedItem = await resp.json();
-    // remove input row
-    row.remove();
-    if (!document.querySelector('#entryBody tr')) addRow();
+    
+    // Animate row out
+    row.style.animation = 'fadeOutUp 0.3s ease-out';
+    setTimeout(() => {
+      row.remove();
+      if (!document.querySelector('#entryBody tr')) addRow();
+    }, 300);
 
     // move to current entries with the returned id (so delete/edit works immediately)
-    moveToCurrent({
-      id: savedItem.id,
-      name: data.Title,
-      date: data.Date,
-      task: data.Task,
-      hours: data.Hours,
-      notes: data.Notes
-    });
+    setTimeout(() => {
+      moveToCurrent({
+        id: savedItem.id,
+        name: data.Title,
+        date: data.Date,
+        task: data.Task,
+        hours: data.Hours,
+        notes: data.Notes
+      });
+      showToast('Time entry saved successfully!', 'success');
+    }, 150);
 
   } catch (err){
     console.error('saveRow exception', err);
-    alert('Save failed (see console).');
+    showToast('Failed to save entry. Please check your connection.', 'error');
   } finally {
     // ensure button re-enabled if row still exists
-    if (document.body.contains(btn)) btn.disabled = false;
+    if (document.body.contains(btn)) {
+      setLoading(btn, false);
+      btn.disabled = false;
+    }
   }
 }
+
+// Add fadeOutUp animation
+style.textContent += `
+  @keyframes fadeOutUp {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+  }
+`;
 
 /* Save all: iterate each input-row and call saveRow on its Save button.
    We skip invalid rows (validateRow handles it).
 */
-function saveAll(){
+async function saveAll(){
   const rows = Array.from(document.querySelectorAll('#entryBody tr'));
-  rows.forEach(r => {
-    const saveBtn = r.querySelector('button.btn-primary');
-    if (saveBtn && validateRow(r)) saveRow(saveBtn);
-  });
+  const validRows = rows.filter(r => validateRow(r));
+  
+  if (validRows.length === 0) {
+    showToast('No valid entries to save', 'warning');
+    return;
+  }
+
+  showToast(`Saving ${validRows.length} entries...`, 'success');
+  
+  // Save rows with small delays to avoid overwhelming the API
+  for (let i = 0; i < validRows.length; i++) {
+    const saveBtn = validRows[i].querySelector('button.btn-success');
+    if (saveBtn) {
+      await new Promise(resolve => {
+        setTimeout(async () => {
+          await saveRow(saveBtn);
+          resolve();
+        }, i * 200); // 200ms delay between saves
+      });
+    }
+  }
 }
 
 /* validate input row */
 function validateRow(row){
   let ok = true;
-  row.querySelectorAll('input').forEach(inp => {
-    if (inp.type === 'number') validateHours(inp);
-    if (!inp.checkValidity()) ok = false;
+  const inputs = row.querySelectorAll('input');
+  
+  inputs.forEach(inp => {
+    if (inp.type === 'number') {
+      validateHours(inp);
+      if (inp.classList.contains('invalid-hours')) ok = false;
+    }
+    if (inp.hasAttribute('required') && !inp.value.trim()) {
+      ok = false;
+      inp.style.animation = 'shake 0.3s ease-in-out';
+    }
   });
+  
+  if (!ok) {
+    showToast('Please fill all required fields with valid values', 'error');
+  }
+  
   return ok;
 }
 
@@ -342,24 +1063,55 @@ function moveToCurrent(data){
   const name = data.name || 'Unknown';
   const weekLabel = getWeekLabel(data.date || new Date().toISOString().slice(0,10));
 
+  // Remove empty state if present
+  const container = document.getElementById('currentEntriesContainer');
+  const emptyState = container.querySelector('.empty-state');
+  if (emptyState) emptyState.remove();
+
   // create group container for name if not exists
   if (!entryGroups[name]) {
     const groupDiv = document.createElement('details');
     groupDiv.open = true;
     groupDiv.className = 'group-section';
-    groupDiv.innerHTML = `<summary><strong>${escapeHtml(name)}'s Entries</strong></summary><div class="group-weeks"></div>`;
-    document.getElementById('currentEntriesContainer').appendChild(groupDiv);
+    groupDiv.style.animation = 'fadeInUp 0.4s ease-out';
+    groupDiv.innerHTML = `
+      <summary>
+        <span>👤</span>
+        <strong>${escapeHtml(name)}'s Entries</strong>
+      </summary>
+      <div class="group-weeks"></div>
+    `;
+    container.appendChild(groupDiv);
     entryGroups[name] = { container: groupDiv.querySelector('.group-weeks'), weeks: {} };
   }
 
   // ensure week table present
   if (!entryGroups[name].weeks[weekLabel]) {
     const wrapper = document.createElement('div');
+    wrapper.style.animation = 'fadeInUp 0.3s ease-out';
     wrapper.innerHTML = `
-      <table>
-        <thead><tr><th>Name</th><th>Date</th><th>Task</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead>
-        <tbody><tr class="week-header"><td colspan="6">${escapeHtml(weekLabel)}</td></tr></tbody>
-      </table>
+      <div class="table-container" style="margin-bottom: 24px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Date</th>
+              <th>Task</th>
+              <th>Hours</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="week-header">
+              <td colspan="6">
+                <span>📅</span>
+                ${escapeHtml(weekLabel)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     `;
     entryGroups[name].container.appendChild(wrapper);
     entryGroups[name].weeks[weekLabel] = wrapper.querySelector('tbody');
@@ -370,15 +1122,26 @@ function moveToCurrent(data){
   // append row (store sp id on data-spid)
   const tr = document.createElement('tr');
   tr.dataset.spid = data.id || '';
+  tr.style.animation = 'fadeInUp 0.3s ease-out';
   tr.innerHTML = `
     <td>${escapeHtml(data.name)}</td>
     <td>${escapeHtml(data.date)}</td>
     <td>${escapeHtml(data.task)}</td>
-    <td>${(Number(data.hours) || 0).toFixed(2)}</td>
+    <td>
+      <span class="status-indicator status-success">
+        ${(Number(data.hours) || 0).toFixed(2)}h
+      </span>
+    </td>
     <td>${escapeHtml(data.notes)}</td>
     <td class="actions-inline">
-      <button class="btn btn-gray btn-sm" onclick="enterEditMode(this)">Edit</button>
-      <button class="btn btn-red btn-sm" onclick="deleteEntry(this)">Delete</button>
+      <button class="btn btn-secondary btn-sm" onclick="enterEditMode(this)">
+        <span>✏️</span>
+        Edit
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="deleteEntry(this)">
+        <span>🗑</span>
+        Delete
+      </button>
     </td>
   `;
   tbody.appendChild(tr);
@@ -391,10 +1154,13 @@ function moveToCurrent(data){
 async function deleteEntry(btn){
   const tr = btn.closest('tr');
   const spid = tr.dataset.spid;
-  const name = tr.closest('.group-weeks').parentElement.querySelector('summary').textContent.replace("'s Entries",'').trim();
-  const weekLabel = tr.closest('tbody').querySelector('.week-header').textContent;
+  const name = tr.closest('.group-weeks').parentElement.querySelector('summary strong').textContent.replace("'s Entries",'').trim();
+  const weekLabel = tr.closest('tbody').querySelector('.week-header').textContent.replace('📅 ', '').trim();
 
-  if (!confirm('Delete this entry?')) return;
+  if (!confirm('Delete this entry? This cannot be undone.')) return;
+
+  setLoading(btn, true);
+  btn.disabled = true;
 
   // If spid exists, delete in SharePoint first
   if (spid){
@@ -404,20 +1170,27 @@ async function deleteEntry(btn){
       if (!resp.ok){
         const body = await resp.text();
         console.error('DELETE error', resp.status, body);
-        alert('Delete failed (see console).');
+        showToast('Failed to delete entry. Please try again.', 'error');
+        setLoading(btn, false);
+        btn.disabled = false;
         return;
       }
     } catch (err){
       console.error('deleteEntry exception', err);
-      alert('Delete failed (see console).');
+      showToast('Failed to delete entry. Please check your connection.', 'error');
+      setLoading(btn, false);
+      btn.disabled = false;
       return;
     }
   }
-  // remove from UI and update totals
-  tr.remove();
-  // updateTotal expects name and weekLabel
-  // Extract plain weekLabel text (we used format "This Week (yyyy-mm-dd–yyyy-mm-dd)")
-  updateTotal(name, weekLabel);
+  
+  // Animate out and remove from UI
+  tr.style.animation = 'fadeOutDown 0.3s ease-out';
+  setTimeout(() => {
+    tr.remove();
+    updateTotal(name, weekLabel);
+    showToast('Entry deleted successfully', 'success');
+  }, 300);
 }
 
 /* ===========================================================
@@ -427,7 +1200,7 @@ function enterEditMode(editBtn){
   const tr = editBtn.closest('tr');
 
   if (currentlyEditingRow && currentlyEditingRow !== tr){
-    alert('Please Save or Cancel the currently editing row first.');
+    showToast('Please save or cancel the currently editing row first.', 'warning');
     return;
   }
   if (tr.classList.contains('editing')) return; // already in edit mode
@@ -442,22 +1215,28 @@ function enterEditMode(editBtn){
     name: tds[0].textContent,
     date: tds[1].textContent,
     task: tds[2].textContent,
-    hours: tds[3].textContent,
+    hours: tds[3].textContent.replace('h', '').trim(),
     notes: tds[4].textContent
   };
   tr.dataset.orig = JSON.stringify(orig);
 
   // Replace cells 0..4 with inputs
-  tds[0].innerHTML = `<input type="text" value="${escapeHtml(orig.name)}">`;
-  tds[1].innerHTML = `<input type="date" value="${escapeHtml(orig.date)}">`;
-  tds[2].innerHTML = `<input type="text" value="${escapeHtml(orig.task)}">`;
-  tds[3].innerHTML = `<input type="number" step="0.25" min="0" value="${parseFloat(orig.hours) || 0}" oninput="validateHours(this)">`;
+  tds[0].innerHTML = `<input type="text" value="${escapeHtml(orig.name)}" required>`;
+  tds[1].innerHTML = `<input type="date" value="${escapeHtml(orig.date)}" required>`;
+  tds[2].innerHTML = `<input type="text" value="${escapeHtml(orig.task)}" required>`;
+  tds[3].innerHTML = `<input type="number" step="0.25" min="0" value="${parseFloat(orig.hours) || 0}" oninput="validateHours(this)" required>`;
   tds[4].innerHTML = `<input type="text" value="${escapeHtml(orig.notes)}">`;
 
   // Replace actions with Save & Cancel
   tds[5].innerHTML = `
-    <button class="btn btn-primary btn-sm" onclick="saveInlineEdit(this)">Save</button>
-    <button class="btn btn-gray btn-sm" onclick="cancelInlineEdit(this)">Cancel</button>
+    <button class="btn btn-success btn-sm" onclick="saveInlineEdit(this)">
+      <span>💾</span>
+      Save
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="cancelInlineEdit(this)">
+      <span>❌</span>
+      Cancel
+    </button>
   `;
 }
 
@@ -465,14 +1244,16 @@ async function saveInlineEdit(saveBtn){
   const tr = saveBtn.closest('tr');
   if (!tr || !tr.classList.contains('editing')) return;
   const inputs = tr.querySelectorAll('input');
+  
   // validation: make sure required fields are present
   if (!inputs[0].value || !inputs[1].value || !inputs[2].value || !inputs[3].value){
-    alert('Please fill Name, Date, Task, and Hours before saving.');
+    showToast('Please fill Name, Date, Task, and Hours before saving.', 'error');
     return;
   }
+  
   validateHours(inputs[3]);
   if (inputs[3].classList.contains('invalid-hours')){
-    alert('Hours must be >0, <=24, in 0.25 increments.');
+    showToast('Hours must be >0, ≤24, in 0.25 increments.', 'error');
     return;
   }
 
@@ -488,12 +1269,13 @@ async function saveInlineEdit(saveBtn){
   const spid = tr.dataset.spid;
   // If there's no spid, can't edit (shouldn't happen since loaded entries have ids)
   if (!spid){
-    alert('This entry does not have a SharePoint id and cannot be edited inline.');
+    showToast('This entry does not have a SharePoint ID and cannot be edited.', 'error');
     cancelInlineEdit(saveBtn);
     return;
   }
 
   // Disable save button to prevent double-click
+  setLoading(saveBtn, true);
   saveBtn.disabled = true;
 
   try {
@@ -510,7 +1292,8 @@ async function saveInlineEdit(saveBtn){
     if (!resp.ok){
       const errText = await resp.text();
       console.error('PATCH error', resp.status, errText);
-      alert('Update failed (see console).');
+      showToast('Failed to update entry. Please try again.', 'error');
+      setLoading(saveBtn, false);
       saveBtn.disabled = false;
       return;
     }
@@ -523,23 +1306,36 @@ async function saveInlineEdit(saveBtn){
     tr.children[0].textContent = updated.Title;
     tr.children[1].textContent = updated.Date;
     tr.children[2].textContent = updated.Task;
-    tr.children[3].textContent = (Number(updated.Hours)||0).toFixed(2);
+    tr.children[3].innerHTML = `
+      <span class="status-indicator status-success">
+        ${(Number(updated.Hours)||0).toFixed(2)}h
+      </span>
+    `;
     tr.children[4].textContent = updated.Notes;
 
     // restore actions
     tr.children[5].innerHTML = `
-      <button class="btn btn-gray btn-sm" onclick="enterEditMode(this)">Edit</button>
-      <button class="btn btn-red btn-sm" onclick="deleteEntry(this)">Delete</button>
+      <button class="btn btn-secondary btn-sm" onclick="enterEditMode(this)">
+        <span>✏️</span>
+        Edit
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="deleteEntry(this)">
+        <span>🗑</span>
+        Delete
+      </button>
     `;
 
     // Update totals for the week
     const name = updated.Title;
-    const weekLabel = tr.closest('tbody').querySelector('.week-header').textContent;
+    const weekLabel = tr.closest('tbody').querySelector('.week-header').textContent.replace('📅 ', '').trim();
     updateTotal(name, weekLabel);
+    
+    showToast('Entry updated successfully!', 'success');
 
   } catch (err){
     console.error('saveInlineEdit exception', err);
-    alert('Update failed (see console).');
+    showToast('Failed to update entry. Please check your connection.', 'error');
+    setLoading(saveBtn, false);
     saveBtn.disabled = false;
   }
 }
@@ -553,13 +1349,23 @@ function cancelInlineEdit(cancelBtn){
   tr.children[0].textContent = orig.name;
   tr.children[1].textContent = orig.date;
   tr.children[2].textContent = orig.task;
-  tr.children[3].textContent = orig.hours;
+  tr.children[3].innerHTML = `
+    <span class="status-indicator status-success">
+      ${orig.hours}h
+    </span>
+  `;
   tr.children[4].textContent = orig.notes;
 
   // restore actions
   tr.children[5].innerHTML = `
-    <button class="btn btn-gray btn-sm" onclick="enterEditMode(this)">Edit</button>
-    <button class="btn btn-red btn-sm" onclick="deleteEntry(this)">Delete</button>
+    <button class="btn btn-secondary btn-sm" onclick="enterEditMode(this)">
+      <span>✏️</span>
+      Edit
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="deleteEntry(this)">
+      <span>🗑</span>
+      Delete
+    </button>
   `;
   tr.classList.remove('editing');
   currentlyEditingRow = null;
@@ -574,7 +1380,8 @@ function updateTotal(name, weekLabel){
   const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('week-header') && !r.classList.contains('total-row'));
   let total = 0;
   rows.forEach(r => {
-    const val = parseFloat(r.children[3].textContent) || 0;
+    const hourText = r.children[3].textContent || r.children[3].innerText || '';
+    const val = parseFloat(hourText.replace('h', '').trim()) || 0;
     total += val;
   });
 
@@ -582,11 +1389,23 @@ function updateTotal(name, weekLabel){
   if (!totalRow){
     totalRow = document.createElement('tr');
     totalRow.className = 'total-row';
-    totalRow.innerHTML = `<td colspan="3">Total:</td><td>${total.toFixed(2)}</td><td colspan="2"></td>`;
+    totalRow.innerHTML = `
+      <td colspan="3">
+        <strong>📊 Week Total:</strong>
+      </td>
+      <td>
+        <span class="status-indicator ${total >= 40 ? 'status-success' : 'status-warning'}">
+          ${total.toFixed(2)}h
+        </span>
+      </td>
+      <td colspan="2"></td>
+    `;
     tbody.appendChild(totalRow);
   } else {
-    // totalRow structure: <td colspan=3>Total:</td><td>value</td>...
-    totalRow.children[1].textContent = total.toFixed(2);
+    // Update existing total
+    const indicator = totalRow.querySelector('.status-indicator');
+    indicator.textContent = `${total.toFixed(2)}h`;
+    indicator.className = `status-indicator ${total >= 40 ? 'status-success' : 'status-warning'}`;
   }
 }
 
@@ -600,7 +1419,12 @@ function getWeekLabel(dateStr){
   start.setDate(d.getDate() - d.getDay());
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
-  return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
+  
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  return `Week of ${formatDate(start)} - ${formatDate(end)}`;
 }
 
 /* small escaping helper for safety in innerHTML creation */
@@ -613,7 +1437,3 @@ function escapeHtml(str){
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-
-</script>
-</body>
-</html>
