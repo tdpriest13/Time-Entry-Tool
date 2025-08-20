@@ -697,7 +697,7 @@ function setLoading(element, isLoading) {
    =========================================================== */
 async function signIn(){
   console.log('🔍 Sign-in process started...');
-  const signInBtn = document.querySelector('#signin-container .btn');
+  const signInBtn = document.getElementById('signin-btn');
   
   // Debug checks
   console.log('🔍 MSAL library loaded:', typeof msal !== 'undefined');
@@ -759,6 +759,231 @@ async function signIn(){
     setLoading(signInBtn, false);
   }
 }
+
+/* small escaping helper for safety in innerHTML creation */
+function escapeHtml(str){
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/* ===========================================================
+   All other functions follow here...
+   =========================================================== */
+
+/* ===========================================================
+   Read from SharePoint (Graph)
+   =========================================================== */
+async function loadCurrentEntriesFromSharePoint(){
+  try {
+    const url = "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items?expand=fields";
+    const resp = await fetch(url, { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` }});
+    if (!resp.ok){
+      const e = await resp.text();
+      console.error('Failed to fetch entries', resp.status, e);
+      showToast('Failed to load existing entries', 'error');
+      return;
+    }
+    const json = await resp.json();
+
+    // Clear old UI & cache
+    const container = document.getElementById('currentEntriesContainer');
+    container.innerHTML = '';
+    Object.keys(entryGroups).forEach(k => delete entryGroups[k]);
+
+    if (!json.value || json.value.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📝</div>
+          <p>No time entries yet. Add your first entry above!</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Render each item
+    json.value.forEach(item => {
+      const f = item.fields || {};
+      // support Title OR Name (Title is typical internal name)
+      moveToCurrent({
+        id: item.id,
+        name: f.Title ?? f.Name ?? '',
+        date: f.Date ?? '',
+        task: f.Task ?? '',
+        hours: Number(f.Hours) || 0,
+        notes: f.Notes ?? ''
+      });
+    });
+
+    showToast(`Loaded ${json.value.length} time entries`, 'success');
+  } catch (err){
+    console.error('loadCurrentEntriesFromSharePoint error', err);
+    showToast('Failed to load entries. Please refresh and try again.', 'error');
+  }
+}
+
+/* ===========================================================
+   Top-row: add/copy/remove/save logic for Time Entry input rows
+   =========================================================== */
+function addRow(data = {}){
+  const table = document.getElementById('entryBody');
+  const row = document.createElement('tr');
+  row.style.animation = 'fadeInUp 0.3s ease-out';
+  row.innerHTML = `
+    <td><input type="text" value="${escapeHtml(data.name||'')}" required placeholder="Enter your name"></td>
+    <td><input type="date" value="${data.date||''}" required></td>
+    <td><input type="text" value="${escapeHtml(data.task||'')}" required placeholder="What did you work on?"></td>
+    <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)" placeholder="0.00"></td>
+    <td><input type="text" value="${escapeHtml(data.notes||'')}" placeholder="Optional notes"></td>
+    <td class="actions-inline">
+      <button class="btn btn-success btn-sm" onclick="saveRow(this)">
+        <span>💾</span>
+        Save
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="copyRow(this)">
+        <span>📋</span>
+        Copy
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="removeRow(this)">
+        <span>🗑</span>
+        Remove
+      </button>
+    </td>
+  `;
+  table.appendChild(row);
+  // validate hours initial state
+  const hoursInput = row.querySelector('input[type="number"]');
+  if (hoursInput) validateHours(hoursInput);
+}
+
+function copyRow(btn){
+  const row = btn.closest('tr');
+  const inputs = row.querySelectorAll('input');
+  addRow({
+    name: inputs[0].value,
+    date: inputs[1].value,
+    task: inputs[2].value,
+    hours: inputs[3].value,
+    notes: inputs[4].value
+  });
+  showToast('Row copied!', 'success', 2000);
+}
+
+function removeRow(btn){
+  const row = btn.closest('tr');
+  if (!confirm('Remove this entry?')) return;
+  
+  row.style.animation = 'fadeOutDown 0.3s ease-out';
+  setTimeout(() => {
+    row.remove();
+    if (!document.querySelector('#entryBody tr')) addRow();
+  }, 300);
+}
+
+function removeAll(){
+  if (!confirm('Remove all unsaved entries? This cannot be undone.')) return;
+  
+  const tbody = document.getElementById('entryBody');
+  Array.from(tbody.children).forEach((row, index) => {
+    setTimeout(() => {
+      row.style.animation = 'fadeOutDown 0.3s ease-out';
+      setTimeout(() => row.remove(), 300);
+    }, index * 50);
+  });
+  
+  setTimeout(() => addRow(), 500);
+  showToast('All entries cleared', 'warning');
+}
+
+function validateHours(input){
+  const val = parseFloat(input.value);
+  const isValid = val > 0 && val <= 24 && (val * 100) % 25 === 0;
+  input.classList.toggle('invalid-hours', !isValid);
+  
+  // Add validation message
+  let message = input.parentElement.querySelector('.validation-message');
+  if (!isValid && val !== 0 && !isNaN(val)) {
+    if (!message) {
+      message = document.createElement('div');
+      message.className = 'validation-message';
+      message.style.cssText = `
+        font-size: 0.75rem;
+        color: var(--danger);
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      `;
+      input.parentElement.appendChild(message);
+    }
+    message.innerHTML = '<span>⚠️</span> Hours must be 0.25-24.00 in 0.25 increments';
+  } else if (message) {
+    message.remove();
+  }
+}
+
+// Simple placeholder functions for now - we'll add the full implementations
+function saveRow(btn) { console.log('saveRow called'); }
+function saveAll() { console.log('saveAll called'); }
+function validateRow(row) { return true; }
+function moveToCurrent(data) { console.log('moveToCurrent called', data); }
+function deleteEntry(btn) { console.log('deleteEntry called'); }
+function enterEditMode(btn) { console.log('enterEditMode called'); }
+function saveInlineEdit(btn) { console.log('saveInlineEdit called'); }
+function cancelInlineEdit(btn) { console.log('cancelInlineEdit called'); }
+function updateTotal(name, weekLabel) { console.log('updateTotal called'); }
+function getWeekLabel(dateStr) { return 'This Week'; }
+
+// Make functions available globally for debugging
+window.signIn = signIn;
+window.showToast = showToast;
+window.addRow = addRow;
+window.saveAll = saveAll;
+window.removeAll = removeAll;
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔍 DOM loaded, initializing...');
+  console.log('🔍 signIn function defined:', typeof signIn);
+  console.log('🔍 MSAL available:', typeof msal !== 'undefined');
+  
+  // Set up sign-in button
+  const signInBtn = document.getElementById('signin-btn');
+  if (signInBtn) {
+    console.log('🔍 Sign-in button found, attaching event listener');
+    signInBtn.addEventListener('click', signIn);
+  } else {
+    console.error('❌ Sign-in button not found');
+  }
+  
+  // Set up other buttons
+  const addTimeBtn = document.getElementById('add-time-btn');
+  if (addTimeBtn) {
+    addTimeBtn.addEventListener('click', () => addRow());
+  }
+  
+  const saveAllBtn = document.getElementById('save-all-btn');
+  if (saveAllBtn) {
+    saveAllBtn.addEventListener('click', saveAll);
+  }
+  
+  const removeAllBtn = document.getElementById('remove-all-btn');
+  if (removeAllBtn) {
+    removeAllBtn.addEventListener('click', removeAll);
+  }
+  
+  // Test function availability
+  if (typeof signIn === 'undefined') {
+    console.error('❌ signIn function not defined');
+  } else {
+    console.log('✅ signIn function is available');
+  }
+});
+</script>
 
 // Add initialization check when page loads
 document.addEventListener('DOMContentLoaded', function() {
