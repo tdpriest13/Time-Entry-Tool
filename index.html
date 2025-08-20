@@ -1,470 +1,273 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Time Entry Tool</title>
-  <style>
-    :root {
-      --primary: #007bff;
-      --primary-hover: #0056b3;
-      --gray-bg: #f8f9fa;
-      --border-color: #ced4da;
-      --font: 'Segoe UI', Tahoma, sans-serif;
-      --btn-gray: #6c757d;
-      --btn-gray-hover: #5a6268;
-      --btn-red: #dc3545;
-      --btn-red-hover: #b02a37;
-      --highlight: #fff3cd;
-    }
-    body {
-      font-family: var(--font);
-      background: var(--gray-bg);
-      margin: 0;
-      padding: 30px;
-    }
-    .section {
-      background: white;
-      padding: 24px;
-      max-width: 1200px;
-      margin: 0 auto 24px auto;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    h2 { font-size: 22px; margin-bottom: 16px; }
-    .btn {
-      border: none; border-radius: 6px; font-weight: 600; font-size: 14px;
-      cursor: pointer; padding: 8px 14px; color: white; margin: 6px 6px 6px 0;
-    }
-    .btn-primary { background-color: var(--primary); }
-    .btn-primary:hover { background-color: var(--primary-hover); }
-    .btn-gray { background-color: var(--btn-gray); }
-    .btn-gray:hover { background-color: var(--btn-gray-hover); }
-    .btn-red { background-color: var(--btn-red); }
-    .btn-red:hover { background-color: var(--btn-red-hover); }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-    th, td { border: 1px solid var(--border-color); padding: 10px; text-align: left; }
-    th.required::after { content: " *"; color: var(--btn-red); }
-    input, select { width: 100%; padding: 6px; box-sizing: border-box; }
-    .invalid-hours { border: 1px solid var(--btn-red); background-color: #ffe5e5; }
-    .group-section { margin-bottom: 20px; }
-    .week-header td { background-color: #f1f1f1; font-weight: bold; }
-    .total-row { background-color: #e6f0fa; font-weight: bold; }
-    .editing-row { background-color: var(--highlight); }
-    #signin-container { text-align: center; margin-top: 100px; }
-    .hidden { display: none; }
-  </style>
-  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Time Entry Tool</title>
+<style>
+  :root {
+    --primary: #007bff;
+    --primary-hover: #0056b3;
+    --gray-bg: #f8f9fa;
+    --border-color: #ced4da;
+    --font: 'Segoe UI', Tahoma, sans-serif;
+    --btn-gray: #6c757d;
+    --btn-gray-hover: #5a6268;
+    --btn-red: #dc3545;
+    --btn-red-hover: #b02a37;
+  }
+  body { font-family: var(--font); background: var(--gray-bg); margin: 0; padding: 30px; }
+  .section { background: white; padding: 24px; max-width: 1200px; margin: 0 auto 24px auto; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+  h2 { font-size: 22px; margin-bottom: 16px; }
+  .btn { border: none; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; padding: 8px 14px; color: white; margin: 6px 6px 6px 0; }
+  .btn-primary { background-color: var(--primary); }
+  .btn-primary:hover { background-color: var(--primary-hover); }
+  .btn-gray { background-color: var(--btn-gray); }
+  .btn-gray:hover { background-color: var(--btn-gray-hover); }
+  .btn-red { background-color: var(--btn-red); }
+  .btn-red:hover { background-color: var(--btn-red-hover); }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  th, td { border: 1px solid var(--border-color); padding: 10px; text-align: left; }
+  th.required::after { content: " *"; color: var(--btn-red); }
+  input, select { width: 100%; padding: 6px; box-sizing: border-box; }
+  .invalid-hours { border: 1px solid var(--btn-red); background-color: #ffe5e5; }
+  .group-section { margin-bottom: 20px; }
+  .week-header td { background-color: #f1f1f1; font-weight: bold; }
+  .total-row { background-color: #e6f0fa; font-weight: bold; }
+  #signin-container { text-align: center; margin-top: 100px; }
+  .hidden { display: none; }
+</style>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 </head>
 <body>
-  <!-- Sign-in Screen -->
-  <div id="signin-container">
-    <h2>Welcome to the Time Entry Tool</h2>
-    <button class="btn btn-primary" onclick="signIn()">Sign In</button>
+<div id="signin-container">
+  <h2>Welcome to the Time Entry Tool</h2>
+  <button class="btn btn-primary" onclick="signIn()">Sign In</button>
+</div>
+<div id="main-ui" class="hidden">
+  <div class="section">
+    <h2>Time Entry</h2>
+    <button class="btn btn-primary" onclick="addRow()">Add Time</button>
+    <button class="btn btn-primary" onclick="saveAll()">Save All</button>
+    <button class="btn btn-red" onclick="removeAll()">Remove All</button>
+    <table>
+      <thead>
+        <tr>
+          <th class="required">Name</th>
+          <th class="required">Date</th>
+          <th class="required">Task</th>
+          <th class="required">Hours</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="entryBody"></tbody>
+    </table>
   </div>
-
-  <!-- Main UI -->
-  <div id="main-ui" class="hidden">
-    <div class="section">
-      <h2>Time Entry</h2>
-      <button class="btn btn-primary" onclick="addRow()">Add Time</button>
-      <button class="btn btn-primary" onclick="saveAll()">Save All</button>
-      <button class="btn btn-red" onclick="removeAll()">Remove All</button>
+  <div class="section">
+    <h2>Current Entries</h2>
+    <div id="currentEntriesContainer"></div>
+  </div>
+</div>
+<script>
+const msalInstance = new msal.PublicClientApplication({
+  auth: {
+    clientId: "abe43417-4888-481d-8e63-c335313a3eac",
+    authority: "https://login.microsoftonline.com/94f35210-3fa2-4689-8c39-06670b265f94",
+    redirectUri: "https://tdpriest13.github.io/Time-Entry-Tool/"
+  }
+});
+let accessToken = null;
+const entryGroups = {};
+async function signIn() {
+  try {
+    const result = await msalInstance.loginPopup({ scopes: ["User.Read", "Sites.ReadWrite.All"] });
+    accessToken = (await msalInstance.acquireTokenSilent({ scopes: ["Sites.ReadWrite.All"], account: result.account })).accessToken;
+    document.getElementById("signin-container").classList.add("hidden");
+    document.getElementById("main-ui").classList.remove("hidden");
+    addRow();
+    loadCurrentEntriesFromSharePoint();
+  } catch (err) {
+    console.error(err);
+    alert("Sign-in failed");
+  }
+}
+async function loadCurrentEntriesFromSharePoint() {
+  try {
+    const response = await fetch(
+      "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items?expand=fields",
+      { method: "GET", headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const data = await response.json();
+    document.getElementById('currentEntriesContainer').innerHTML = '';
+    Object.keys(entryGroups).forEach(k => delete entryGroups[k]);
+    data.value.forEach(item => {
+      const f = item.fields;
+      moveToCurrent({
+        id: item.id,
+        name: f.Name || "",
+        date: f.Date || "",
+        task: f.Task || "",
+        hours: parseFloat(f.Hours) || 0,
+        notes: f.Notes || ""
+      });
+    });
+  } catch (err) {
+    console.error("Failed to load current entries:", err);
+  }
+}
+function addRow(data = {}) {
+  const table = document.getElementById("entryBody");
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input type="text" value="${data.name || ''}" required></td>
+    <td><input type="date" value="${data.date || ''}" required></td>
+    <td><input type="text" value="${data.task || ''}" required></td>
+    <td><input type="number" step="0.25" min="0" value="${data.hours ?? 0}" oninput="validateHours(this)"></td>
+    <td><input type="text" value="${data.notes || ''}"></td>
+    <td>
+      <button class="btn btn-primary btn-sm" onclick="saveRow(this)">Save</button>
+      <button class="btn btn-gray btn-sm" onclick="copyRow(this)">Copy</button>
+      <button class="btn btn-red btn-sm" onclick="removeRow(this)">Remove</button>
+    </td>`;
+  table.appendChild(row);
+}
+function validateHours(input) {
+  const val = parseFloat(input.value);
+  input.classList.toggle("invalid-hours", !(val > 0 && val <= 24 && val % 0.25 === 0));
+}
+function copyRow(btn) {
+  const row = btn.closest("tr");
+  const inputs = row.querySelectorAll("input");
+  addRow({ name: inputs[0].value, date: inputs[1].value, task: inputs[2].value, hours: inputs[3].value, notes: inputs[4].value });
+}
+function removeRow(btn) {
+  const row = btn.closest("tr");
+  row.remove();
+  if (!document.querySelector("#entryBody tr")) addRow();
+}
+function removeAll() {
+  document.getElementById("entryBody").innerHTML = '';
+  addRow();
+}
+async function saveRow(btn) {
+  const row = btn.closest("tr");
+  if (!validateRow(row)) return;
+  const inputs = row.querySelectorAll("input");
+  const data = {
+    Name: inputs[0].value,
+    Date: inputs[1].value,
+    Task: inputs[2].value,
+    Hours: parseFloat(inputs[3].value),
+    Notes: inputs[4].value
+  };
+  console.log("Saving payload:", data);
+  try {
+    const resp = await fetch(
+      "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items",
+      { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ fields: data }) }
+    );
+    const newItem = await resp.json();
+    if (!resp.ok) throw new Error(JSON.stringify(newItem));
+    row.remove();
+    if (!document.querySelector("#entryBody tr")) addRow();
+    moveToCurrent({
+      id: newItem.id,
+      name: data.Name,
+      date: data.Date,
+      task: data.Task,
+      hours: data.Hours,
+      notes: data.Notes
+    });
+  } catch (err) {
+    console.error("Failed to save to SharePoint", err);
+    alert("Save failed");
+  }
+}
+function saveAll() {
+  [...document.querySelectorAll('#entryBody tr')].forEach(row => {
+    saveRow(row.querySelector('button'));
+  });
+}
+function validateRow(row) {
+  let valid = true;
+  row.querySelectorAll("input").forEach(input => {
+    if (input.type === 'number') validateHours(input);
+    if (!input.checkValidity()) valid = false;
+  });
+  return valid;
+}
+function moveToCurrent(data) {
+  const weekLabel = getWeekLabel(data.date);
+  if (!entryGroups[data.name]) {
+    const groupDiv = document.createElement('details');
+    groupDiv.open = true;
+    groupDiv.className = 'group-section';
+    groupDiv.innerHTML = `<summary><strong>${data.name}'s Entries</strong></summary><div class="group-weeks"></div>`;
+    document.getElementById('currentEntriesContainer').appendChild(groupDiv);
+    entryGroups[data.name] = { container: groupDiv.querySelector('.group-weeks'), weeks: {} };
+  }
+  if (!entryGroups[data.name].weeks[weekLabel]) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
       <table>
-        <thead>
-          <tr>
-            <th class="required">Name</th>
-            <th class="required">Date</th>
-            <th class="required">Task</th>
-            <th class="required">Hours</th>
-            <th>Notes</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="entryBody"></tbody>
-      </table>
-    </div>
-
-    <div class="section">
-      <h2>Current Entries</h2>
-      <div id="currentEntriesContainer"></div>
-    </div>
-  </div>
-
-  <script>
-    // ====== MSAL Setup with silent SSO and localStorage cache ======
-    const msalInstance = new msal.PublicClientApplication({
-      auth: {
-        clientId: "abe43417-4888-481d-8e63-c335313a3eac",
-        authority: "https://login.microsoftonline.com/94f35210-3fa2-4689-8c39-06670b265f94",
-        redirectUri: "https://tdpriest13.github.io/Time-Entry-Tool/"
-      },
-      cache: { cacheLocation: "localStorage", storeAuthStateInCookie: true }
-    });
-
-    const graphScopes = ["User.Read", "Sites.ReadWrite.All"];
-    let accessToken = null;
-    let currentEditingRow = null; // only one editable row at a time (in Current Entries)
-
-    const apiBase =
-      "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries";
-
-    const entryGroups = {};
-
-    document.addEventListener("DOMContentLoaded", async () => {
-      try {
-        await msalInstance.handleRedirectPromise();
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts.length > 0) {
-          accessToken = await getTokenSilent(accounts[0]);
-          if (accessToken) showMainUI();
-        }
-      } catch (e) {
-        console.warn("Silent SSO not available yet:", e);
-      }
-    });
-
-    async function getTokenSilent(account) {
-      try {
-        const resp = await msalInstance.acquireTokenSilent({ scopes: graphScopes, account });
-        return resp.accessToken;
-      } catch (e) {
-        // fall back to interactive
-        const login = await msalInstance.loginPopup({ scopes: graphScopes });
-        const resp = await msalInstance.acquireTokenSilent({ scopes: graphScopes, account: login.account });
-        return resp.accessToken;
-      }
-    }
-
-    async function signIn() {
-      try {
-        const login = await msalInstance.loginPopup({ scopes: graphScopes });
-        accessToken = (await msalInstance.acquireTokenSilent({ scopes: graphScopes, account: login.account })).accessToken;
-        showMainUI();
-      } catch (err) {
-        console.error("Sign-in failed:", err);
-        alert("Sign-in failed");
-      }
-    }
-
-    function showMainUI() {
-      document.getElementById("signin-container").classList.add("hidden");
-      document.getElementById("main-ui").classList.remove("hidden");
-      addRow();
-      loadCurrentEntriesFromSharePoint();
-    }
-
-    // ====== READ: Load Current Entries ======
-    async function loadCurrentEntriesFromSharePoint() {
-      try {
-        const response = await fetch(`${apiBase}/items?expand=fields`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        const data = await response.json();
-
-        document.getElementById('currentEntriesContainer').innerHTML = '';
-        Object.keys(entryGroups).forEach(k => delete entryGroups[k]);
-
-        (data.value || []).forEach(item => {
-          const f = item.fields || {};
-          moveToCurrent({
-            id: item.id,
-            name: f.Name || "",
-            date: f.Date || "",
-            task: f.Task || "",
-            hours: parseFloat(f.Hours) || 0,
-            notes: f.Notes || ""
-          });
-        });
-      } catch (err) {
-        console.error("Failed to load entries:", err);
-      }
-    }
-
-    // ====== CREATE (top table) ======
-    function addRow(data = {}) {
-      const table = document.getElementById("entryBody");
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><input type="text" value="${data.name || ''}" required></td>
-        <td><input type="date" value="${data.date || ''}" required></td>
-        <td><input type="text" value="${data.task || ''}" required></td>
-        <td><input type="number" step="0.25" min="0" value="${data.hours ?? 0}" oninput="validateHours(this)"></td>
-        <td><input type="text" value="${data.notes || ''}"></td>
-        <td>
-          <button class="btn btn-primary btn-sm" onclick="saveRow(this)">Save</button>
-          <button class="btn btn-gray btn-sm" onclick="copyRow(this)">Copy</button>
-          <button class="btn btn-red btn-sm" onclick="removeRow(this)">Remove</button>
-        </td>`;
-      table.appendChild(row);
-    }
-
-    function validateHours(input) {
-      const val = parseFloat(input.value);
-      input.classList.toggle("invalid-hours", !(val > 0 && val <= 24 && val % 0.25 === 0));
-    }
-
-    function copyRow(btn) {
-      const row = btn.closest("tr");
-      const inputs = row.querySelectorAll("input");
-      addRow({
-        name: inputs[0].value,
-        date: inputs[1].value,
-        task: inputs[2].value,
-        hours: inputs[3].value,
-        notes: inputs[4].value
-      });
-    }
-
-    function removeRow(btn) {
-      const row = btn.closest("tr");
-      row.remove();
-      if (!document.querySelector("#entryBody tr")) addRow();
-    }
-
-    function removeAll() {
-      document.getElementById("entryBody").innerHTML = '';
-      addRow();
-    }
-
-    async function saveRow(btn) {
-      const row = btn.closest("tr");
-      if (!validateRow(row)) return;
-
-      const inputs = row.querySelectorAll("input");
-      const payload = {
-        Name: inputs[0].value,
-        Date: inputs[1].value,
-        Task: inputs[2].value,
-        Hours: parseFloat(inputs[3].value),
-        Notes: inputs[4].value
-      };
-
-      try {
-        const res = await fetch(`${apiBase}/items`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ fields: payload })
-        });
-        const saved = await res.json();
-        // Reflect in UI immediately
-        moveToCurrent({
-          id: saved.id,
-          name: payload.Name,
-          date: payload.Date,
-          task: payload.Task,
-          hours: payload.Hours,
-          notes: payload.Notes
-        });
-        row.remove();
-        if (!document.querySelector("#entryBody tr")) addRow();
-      } catch (err) {
-        console.error("Create failed:", err);
-        alert("Save failed");
-      }
-    }
-
-    function saveAll() {
-      [...document.querySelectorAll('#entryBody tr')].forEach(row => {
-        const saveBtn = row.querySelector('button'); // first button is Save
-        if (saveBtn) saveRow(saveBtn);
-      });
-    }
-
-    function validateRow(row) {
-      let valid = true;
-      row.querySelectorAll("input").forEach(input => {
-        if (input.type === 'number') validateHours(input);
-        if (!input.checkValidity()) valid = false;
-      });
-      return valid;
-    }
-
-    // ====== RENDER into Current Entries (grouped) ======
-    function moveToCurrent(data) {
-      const weekLabel = getWeekLabel(data.date);
-      if (!entryGroups[data.name]) {
-        const groupDiv = document.createElement('details');
-        groupDiv.open = true;
-        groupDiv.className = 'group-section';
-        groupDiv.innerHTML = `<summary><strong>${data.name}'s Entries</strong></summary><div class="group-weeks"></div>`;
-        document.getElementById('currentEntriesContainer').appendChild(groupDiv);
-        entryGroups[data.name] = { container: groupDiv.querySelector('.group-weeks'), weeks: {} };
-      }
-      if (!entryGroups[data.name].weeks[weekLabel]) {
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = `
-          <table>
-            <thead><tr><th>Name</th><th>Date</th><th>Task</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead>
-            <tbody><tr class="week-header"><td colspan="6">${weekLabel}</td></tr></tbody>
-          </table>`;
-        entryGroups[data.name].container.appendChild(wrapper);
-        entryGroups[data.name].weeks[weekLabel] = wrapper.querySelector('tbody');
-      }
-
-      const tbody = entryGroups[data.name].weeks[weekLabel];
-      const tr = document.createElement('tr');
-      tr.dataset.itemId = data.id || '';
-      tr.innerHTML = `
-        <td>${data.name}</td>
-        <td>${data.date}</td>
-        <td>${data.task}</td>
-        <td>${Number(data.hours).toFixed(2)}</td>
-        <td>${data.notes || ""}</td>
-        <td>
-          <button class="btn btn-primary btn-sm" onclick="editCurrentRow(this)">Edit</button>
-          <button class="btn btn-red btn-sm" onclick="deleteCurrentRow(this)">Delete</button>
-        </td>`;
-      tbody.appendChild(tr);
-      updateTotal(data.name, weekLabel);
-    }
-
-    function updateTotal(name, weekLabel) {
-      const tbody = entryGroups[name].weeks[weekLabel];
-      let total = 0;
-      const rows = [...tbody.querySelectorAll('tr')]
-        .filter(r => !r.classList.contains('week-header') && !r.classList.contains('total-row'));
-      rows.forEach(r => total += parseFloat(r.children[3].textContent));
-      let totalRow = tbody.querySelector('.total-row');
-      if (!totalRow) {
-        totalRow = document.createElement('tr');
-        totalRow.className = 'total-row';
-        totalRow.innerHTML = `<td colspan="3">Total:</td><td>${total.toFixed(2)}</td><td colspan="2"></td>`;
-        tbody.appendChild(totalRow);
-      } else {
-        totalRow.children[1].textContent = total.toFixed(2);
-      }
-    }
-
-    function getWeekLabel(dateStr) {
-      const d = new Date(dateStr);
-      const start = new Date(d);
-      start.setDate(d.getDate() - d.getDay());
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
-    }
-
-    // ====== DELETE from Current Entries ======
-    async function deleteCurrentRow(btn) {
-      const tr = btn.closest('tr');
-      if (currentEditingRow && currentEditingRow !== tr) {
-        // prevent deleting while another row is in edit
-        alert("Finish the current edit first.");
-        return;
-      }
-      const id = tr.dataset.itemId;
-      if (!id) { tr.remove(); return; }
-      try {
-        await fetch(`${apiBase}/items/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        tr.remove();
-        // simplest: reload groupings/totals accurately
-        loadCurrentEntriesFromSharePoint();
-      } catch (err) {
-        console.error("Delete failed:", err);
-        alert("Delete failed");
-      }
-    }
-
-    // ====== INLINE EDIT (Current Entries) ======
-    function editCurrentRow(btn) {
-      const tr = btn.closest('tr');
-      if (currentEditingRow && currentEditingRow !== tr) {
-        // Only one editable row at a time
-        cancelEditCurrentRow(currentEditingRow.querySelector('button.btn-gray')); // safe no-op if structure differs
-      }
-      currentEditingRow = tr;
-      tr.classList.add('editing-row');
-
-      const [nameTd, dateTd, taskTd, hoursTd, notesTd, actionsTd] = tr.children;
-      const original = {
-        Name: nameTd.textContent.trim(),
-        Date: dateTd.textContent.trim(),
-        Task: taskTd.textContent.trim(),
-        Hours: hoursTd.textContent.trim(),
-        Notes: notesTd.textContent.trim()
-      };
-      tr.dataset.original = JSON.stringify(original);
-
-      nameTd.innerHTML  = `<input type="text" value="${escapeHtml(original.Name)}" required>`;
-      dateTd.innerHTML  = `<input type="date" value="${escapeHtml(original.Date)}" required>`;
-      taskTd.innerHTML  = `<input type="text" value="${escapeHtml(original.Task)}" required>`;
-      hoursTd.innerHTML = `<input type="number" step="0.25" min="0" value="${Number(original.Hours)}" oninput="validateHours(this)" required>`;
-      notesTd.innerHTML = `<input type="text" value="${escapeHtml(original.Notes)}">`;
-
-      actionsTd.innerHTML = `
-        <button class="btn btn-primary btn-sm" onclick="saveEditCurrentRow(this)">Save</button>
-        <button class="btn btn-gray btn-sm" onclick="cancelEditCurrentRow(this)">Cancel</button>`;
-    }
-
-    async function saveEditCurrentRow(btn) {
-      const tr = btn.closest('tr');
-      const id = tr.dataset.itemId;
-      if (!id) { alert("Missing item id."); return; }
-
-      const inputs = tr.querySelectorAll('input');
-      const payload = {
-        Name: inputs[0].value,
-        Date: inputs[1].value,
-        Task: inputs[2].value,
-        Hours: parseFloat(inputs[3].value || 0),
-        Notes: inputs[4].value
-      };
-
-      // basic validation
-      if (!payload.Name || !payload.Date || !payload.Task || !(payload.Hours > 0)) {
-        alert("Please complete required fields and ensure Hours > 0.");
-        return;
-      }
-
-      try {
-        await fetch(`${apiBase}/items/${id}/fields`, {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
-        currentEditingRow = null;
-        // Re-load to ensure correct grouping if Date changed and totals are accurate
-        loadCurrentEntriesFromSharePoint();
-      } catch (err) {
-        console.error("Update failed:", err);
-        alert("Update failed");
-      }
-    }
-
-    function cancelEditCurrentRow(btn) {
-      const tr = btn.closest('tr');
-      const orig = JSON.parse(tr.dataset.original || "{}");
-      const [, , , , , actionsTd] = tr.children;
-
-      tr.classList.remove('editing-row');
-      tr.children[0].textContent = orig.Name || "";
-      tr.children[1].textContent = orig.Date || "";
-      tr.children[2].textContent = orig.Task || "";
-      tr.children[3].textContent = Number(orig.Hours || 0).toFixed(2);
-      tr.children[4].textContent = orig.Notes || "";
-      actionsTd.innerHTML = `
-        <button class="btn btn-primary btn-sm" onclick="editCurrentRow(this)">Edit</button>
-        <button class="btn btn-red btn-sm" onclick="deleteCurrentRow(this)">Delete</button>`;
-      currentEditingRow = null;
-    }
-
-    function escapeHtml(s) {
-      return (s || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-  </script>
+        <thead><tr><th>Name</th><th>Date</th><th>Task</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead>
+        <tbody><tr class="week-header"><td colspan="6">${weekLabel}</td></tr></tbody>
+      </table>`;
+    entryGroups[data.name].container.appendChild(wrapper);
+    entryGroups[data.name].weeks[weekLabel] = wrapper.querySelector('tbody');
+  }
+  const tbody = entryGroups[data.name].weeks[weekLabel];
+  const tr = document.createElement('tr');
+  if (data.id) tr.dataset.itemId = data.id;
+  tr.innerHTML = `
+    <td>${data.name}</td>
+    <td>${data.date}</td>
+    <td>${data.task}</td>
+    <td>${data.hours.toFixed(2)}</td>
+    <td>${data.notes}</td>
+    <td><button class="btn btn-red btn-sm" onclick="deleteCurrentEntry(this, '${data.name}', '${weekLabel}')">Delete</button></td>`;
+  tbody.appendChild(tr);
+  updateTotal(data.name, weekLabel);
+}
+function updateTotal(name, weekLabel) {
+  const tbody = entryGroups[name].weeks[weekLabel];
+  let total = 0;
+  const rows = [...tbody.querySelectorAll('tr')].filter(r => !r.classList.contains('week-header') && !r.classList.contains('total-row'));
+  rows.forEach(r => total += parseFloat(r.children[3].textContent));
+  let totalRow = tbody.querySelector('.total-row');
+  if (!totalRow) {
+    totalRow = document.createElement('tr');
+    totalRow.className = 'total-row';
+    totalRow.innerHTML = `<td colspan="3">Total:</td><td>${total.toFixed(2)}</td><td colspan="2"></td>`;
+    tbody.appendChild(totalRow);
+  } else {
+    totalRow.children[1].textContent = total.toFixed(2);
+  }
+}
+function getWeekLabel(dateStr) {
+  const d = new Date(dateStr);
+  const start = new Date(d);
+  start.setDate(d.getDate() - d.getDay());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return `This Week (${start.toISOString().slice(0,10)}–${end.toISOString().slice(0,10)})`;
+}
+async function deleteCurrentEntry(btn, name, weekLabel) {
+  const tr = btn.closest('tr');
+  const itemId = tr.dataset.itemId;
+  if (!itemId) { alert("Missing item id."); return; }
+  try {
+    const resp = await fetch(`https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items/${itemId}`,
+      { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!resp.ok) throw new Error(await resp.text());
+    tr.remove();
+    updateTotal(name, weekLabel);
+  } catch (err) {
+    console.error("Failed to delete entry", err);
+    alert("Delete failed");
+  }
+}
+</script>
 </body>
 </html>
