@@ -76,6 +76,51 @@
       min-height: 100vh;
     }
 
+    /* Animations */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeOutDown {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    }
+
+    @keyframes fadeOutUp {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+    }
+
     /* Loading States */
     .spinner {
       display: inline-block;
@@ -86,11 +131,6 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-right: 8px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
     }
 
     .loading {
@@ -315,10 +355,13 @@
       animation: shake 0.3s ease-in-out;
     }
 
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-4px); }
-      75% { transform: translateX(4px); }
+    .validation-message {
+      font-size: 0.75rem;
+      color: var(--danger);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
     /* Status Indicators */
@@ -548,16 +591,6 @@
         min-width: 600px;
       }
     }
-
-    /* Dark mode support (optional) */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --gray-50: #0f172a;
-        --gray-100: #1e293b;
-        --gray-200: #334155;
-        --gray-300: #475569;
-      }
-    }
   </style>
 </head>
 <body>
@@ -630,7 +663,7 @@
 
 <script>
 /* ===========================================================
-   Configuration - update these to match your Azure + SP setup
+   Configuration
    =========================================================== */
 const msalConfig = {
   auth: {
@@ -646,12 +679,22 @@ const tokenRequest = { scopes: ["User.Read", "Sites.ReadWrite.All"] };
    State
    =========================================================== */
 let accessToken = null;
-const entryGroups = {}; // grouping for UI (name -> weeks)
-let currentlyEditingRow = null; // only one row may be edited at a time
+const entryGroups = {};
+let currentlyEditingRow = null;
 
 /* ===========================================================
-   Toast Notification System
+   Utility Functions
    =========================================================== */
+function escapeHtml(str){
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function showToast(message, type = 'success', duration = 3000) {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
@@ -666,19 +709,14 @@ function showToast(message, type = 'success', duration = 3000) {
   
   document.getElementById('toast-container').appendChild(toast);
   
-  // Show toast
   setTimeout(() => toast.classList.add('show'), 100);
   
-  // Hide toast
   setTimeout(() => {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 300);
   }, duration);
 }
 
-/* ===========================================================
-   Loading State Management
-   =========================================================== */
 function setLoading(element, isLoading) {
   if (isLoading) {
     element.classList.add('loading');
@@ -693,20 +731,12 @@ function setLoading(element, isLoading) {
 }
 
 /* ===========================================================
-   Sign in + load data
+   Authentication
    =========================================================== */
 async function signIn(){
-  console.log('🔍 Sign-in process started...');
   const signInBtn = document.getElementById('signin-btn');
   
-  // Debug checks
-  console.log('🔍 MSAL library loaded:', typeof msal !== 'undefined');
-  console.log('🔍 msalInstance created:', !!msalInstance);
-  console.log('🔍 tokenRequest:', tokenRequest);
-  
-  // Check if MSAL is available
   if (typeof msal === 'undefined') {
-    console.error('❌ MSAL library not loaded');
     showToast('Authentication library failed to load. Please refresh the page.', 'error');
     return;
   }
@@ -714,30 +744,19 @@ async function signIn(){
   setLoading(signInBtn, true);
   
   try {
-    console.log('🔍 Attempting popup login...');
     const loginResult = await msalInstance.loginPopup(tokenRequest);
-    console.log('✅ Login successful:', loginResult);
-    
-    console.log('🔍 Acquiring token silently...');
     const tokenResp = await msalInstance.acquireTokenSilent({ ...tokenRequest, account: loginResult.account });
-    console.log('✅ Token acquired');
     accessToken = tokenResp.accessToken;
 
     document.getElementById('signin-container').classList.add('hidden');
     document.getElementById('main-ui').classList.remove('hidden');
 
     showToast('Successfully signed in!', 'success');
-    addRow(); // show one blank row
+    addRow();
     await loadCurrentEntriesFromSharePoint();
   } catch(err){
-    console.error('❌ Sign-in error details:', err);
-    console.log('🔍 Error code:', err.errorCode);
-    console.log('🔍 Error message:', err.errorMessage);
-    
-    // If acquireTokenSilent fails (consent or other), attempt interactive for required scopes
     if (err && err.errorCode === "consent_required"){
       try {
-        console.log('🔍 Attempting interactive consent...');
         const popupResp = await msalInstance.acquireTokenPopup(tokenRequest);
         accessToken = popupResp.accessToken;
         document.getElementById('signin-container').classList.add('hidden');
@@ -747,7 +766,6 @@ async function signIn(){
         await loadCurrentEntriesFromSharePoint();
         return;
       } catch(e){
-        console.error('❌ Interactive consent failed', e);
         showToast('Sign-in failed. Please try again.', 'error');
       }
     } else if (err.errorCode === 'popup_window_error' || err.errorMessage?.includes('popup')) {
@@ -760,37 +778,22 @@ async function signIn(){
   }
 }
 
-/* small escaping helper for safety in innerHTML creation */
-function escapeHtml(str){
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 /* ===========================================================
-   All other functions follow here...
-   =========================================================== */
-
-/* ===========================================================
-   Read from SharePoint (Graph)
+   SharePoint Integration
    =========================================================== */
 async function loadCurrentEntriesFromSharePoint(){
   try {
     const url = "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items?expand=fields";
     const resp = await fetch(url, { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` }});
+    
     if (!resp.ok){
       const e = await resp.text();
-      console.error('Failed to fetch entries', resp.status, e);
       showToast('Failed to load existing entries', 'error');
       return;
     }
+    
     const json = await resp.json();
 
-    // Clear old UI & cache
     const container = document.getElementById('currentEntriesContainer');
     container.innerHTML = '';
     Object.keys(entryGroups).forEach(k => delete entryGroups[k]);
@@ -805,10 +808,8 @@ async function loadCurrentEntriesFromSharePoint(){
       return;
     }
 
-    // Render each item
     json.value.forEach(item => {
       const f = item.fields || {};
-      // support Title OR Name (Title is typical internal name)
       moveToCurrent({
         id: item.id,
         name: f.Title ?? f.Name ?? '',
@@ -821,13 +822,12 @@ async function loadCurrentEntriesFromSharePoint(){
 
     showToast(`Loaded ${json.value.length} time entries`, 'success');
   } catch (err){
-    console.error('loadCurrentEntriesFromSharePoint error', err);
     showToast('Failed to load entries. Please refresh and try again.', 'error');
   }
 }
 
 /* ===========================================================
-   Top-row: add/copy/remove/save logic for Time Entry input rows
+   Entry Management
    =========================================================== */
 function addRow(data = {}){
   const table = document.getElementById('entryBody');
@@ -855,7 +855,6 @@ function addRow(data = {}){
     </td>
   `;
   table.appendChild(row);
-  // validate hours initial state
   const hoursInput = row.querySelector('input[type="number"]');
   if (hoursInput) validateHours(hoursInput);
 }
@@ -904,20 +903,11 @@ function validateHours(input){
   const isValid = val > 0 && val <= 24 && (val * 100) % 25 === 0;
   input.classList.toggle('invalid-hours', !isValid);
   
-  // Add validation message
   let message = input.parentElement.querySelector('.validation-message');
   if (!isValid && val !== 0 && !isNaN(val)) {
     if (!message) {
       message = document.createElement('div');
       message.className = 'validation-message';
-      message.style.cssText = `
-        font-size: 0.75rem;
-        color: var(--danger);
-        margin-top: 4px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      `;
       input.parentElement.appendChild(message);
     }
     message.innerHTML = '<span>⚠️</span> Hours must be 0.25-24.00 in 0.25 increments';
@@ -926,298 +916,16 @@ function validateHours(input){
   }
 }
 
-// Simple placeholder functions for now - we'll add the full implementations
-function saveRow(btn) { console.log('saveRow called'); }
-function saveAll() { console.log('saveAll called'); }
-function validateRow(row) { return true; }
-function moveToCurrent(data) { console.log('moveToCurrent called', data); }
-function deleteEntry(btn) { console.log('deleteEntry called'); }
-function enterEditMode(btn) { console.log('enterEditMode called'); }
-function saveInlineEdit(btn) { console.log('saveInlineEdit called'); }
-function cancelInlineEdit(btn) { console.log('cancelInlineEdit called'); }
-function updateTotal(name, weekLabel) { console.log('updateTotal called'); }
-function getWeekLabel(dateStr) { return 'This Week'; }
-
-// Make functions available globally for debugging
-window.signIn = signIn;
-window.showToast = showToast;
-window.addRow = addRow;
-window.saveAll = saveAll;
-window.removeAll = removeAll;
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🔍 DOM loaded, initializing...');
-  console.log('🔍 signIn function defined:', typeof signIn);
-  console.log('🔍 MSAL available:', typeof msal !== 'undefined');
-  
-  // Set up sign-in button
-  const signInBtn = document.getElementById('signin-btn');
-  if (signInBtn) {
-    console.log('🔍 Sign-in button found, attaching event listener');
-    signInBtn.addEventListener('click', signIn);
-  } else {
-    console.error('❌ Sign-in button not found');
-  }
-  
-  // Set up other buttons
-  const addTimeBtn = document.getElementById('add-time-btn');
-  if (addTimeBtn) {
-    addTimeBtn.addEventListener('click', () => addRow());
-  }
-  
-  const saveAllBtn = document.getElementById('save-all-btn');
-  if (saveAllBtn) {
-    saveAllBtn.addEventListener('click', saveAll);
-  }
-  
-  const removeAllBtn = document.getElementById('remove-all-btn');
-  if (removeAllBtn) {
-    removeAllBtn.addEventListener('click', removeAll);
-  }
-  
-  // Test function availability
-  if (typeof signIn === 'undefined') {
-    console.error('❌ signIn function not defined');
-  } else {
-    console.log('✅ signIn function is available');
-  }
-});
-</script>
-
-// Add initialization check when page loads
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🔍 Page loaded, checking MSAL initialization...');
-  console.log('🔍 MSAL available:', typeof msal !== 'undefined');
-  console.log('🔍 msalInstance:', !!msalInstance);
-  
-  if (typeof msal === 'undefined') {
-    console.error('❌ MSAL library failed to load from CDN');
-    const signInBtn = document.getElementById('signin-btn');
-    if (signInBtn) {
-      signInBtn.innerHTML = '<span>❌</span> Authentication library failed to load';
-      signInBtn.disabled = true;
-    }
-  }
-  
-  // Set up event listeners
-  const signInBtn = document.getElementById('signin-btn');
-  if (signInBtn) {
-    signInBtn.addEventListener('click', signIn);
-  }
-  
-  const addTimeBtn = document.getElementById('add-time-btn');
-  if (addTimeBtn) {
-    addTimeBtn.addEventListener('click', () => addRow());
-  }
-  
-  const saveAllBtn = document.getElementById('save-all-btn');
-  if (saveAllBtn) {
-    saveAllBtn.addEventListener('click', saveAll);
-  }
-  
-  const removeAllBtn = document.getElementById('remove-all-btn');
-  if (removeAllBtn) {
-    removeAllBtn.addEventListener('click', removeAll);
-  }
-});
-
-/* ===========================================================
-   Read from SharePoint (Graph)
-   =========================================================== */
-async function loadCurrentEntriesFromSharePoint(){
-  try {
-    const url = "https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items?expand=fields";
-    const resp = await fetch(url, { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` }});
-    if (!resp.ok){
-      const e = await resp.text();
-      console.error('Failed to fetch entries', resp.status, e);
-      showToast('Failed to load existing entries', 'error');
-      return;
-    }
-    const json = await resp.json();
-
-    // Clear old UI & cache
-    const container = document.getElementById('currentEntriesContainer');
-    container.innerHTML = '';
-    Object.keys(entryGroups).forEach(k => delete entryGroups[k]);
-
-    if (!json.value || json.value.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">📝</div>
-          <p>No time entries yet. Add your first entry above!</p>
-        </div>
-      `;
-      return;
-    }
-
-    // Render each item
-    json.value.forEach(item => {
-      const f = item.fields || {};
-      // support Title OR Name (Title is typical internal name)
-      moveToCurrent({
-        id: item.id,
-        name: f.Title ?? f.Name ?? '',
-        date: f.Date ?? '',
-        task: f.Task ?? '',
-        hours: Number(f.Hours) || 0,
-        notes: f.Notes ?? ''
-      });
-    });
-
-    showToast(`Loaded ${json.value.length} time entries`, 'success');
-  } catch (err){
-    console.error('loadCurrentEntriesFromSharePoint error', err);
-    showToast('Failed to load entries. Please refresh and try again.', 'error');
-  }
-}
-
-/* ===========================================================
-   Top-row: add/copy/remove/save logic for Time Entry input rows
-   =========================================================== */
-function addRow(data = {}){
-  const table = document.getElementById('entryBody');
-  const row = document.createElement('tr');
-  row.style.animation = 'fadeInUp 0.3s ease-out';
-  row.innerHTML = `
-    <td><input type="text" value="${escapeHtml(data.name||'')}" required placeholder="Enter your name"></td>
-    <td><input type="date" value="${data.date||''}" required></td>
-    <td><input type="text" value="${escapeHtml(data.task||'')}" required placeholder="What did you work on?"></td>
-    <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)" placeholder="0.00"></td>
-    <td><input type="text" value="${escapeHtml(data.notes||'')}" placeholder="Optional notes"></td>
-    <td class="actions-inline">
-      <button class="btn btn-success btn-sm" onclick="saveRow(this)">
-        <span>💾</span>
-        Save
-      </button>
-      <button class="btn btn-secondary btn-sm" onclick="copyRow(this)">
-        <span>📋</span>
-        Copy
-      </button>
-      <button class="btn btn-danger btn-sm" onclick="removeRow(this)">
-        <span>🗑</span>
-        Remove
-      </button>
-    </td>
-  `;
-  table.appendChild(row);
-  // validate hours initial state
-  const hoursInput = row.querySelector('input[type="number"]');
-  if (hoursInput) validateHours(hoursInput);
-}
-
-// Add fadeInUp animation
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
-document.head.appendChild(style);
-
-function copyRow(btn){
-  const row = btn.closest('tr');
-  const inputs = row.querySelectorAll('input');
-  addRow({
-    name: inputs[0].value,
-    date: inputs[1].value,
-    task: inputs[2].value,
-    hours: inputs[3].value,
-    notes: inputs[4].value
-  });
-  showToast('Row copied!', 'success', 2000);
-}
-
-function removeRow(btn){
-  const row = btn.closest('tr');
-  if (!confirm('Remove this entry?')) return;
-  
-  row.style.animation = 'fadeOutDown 0.3s ease-out';
-  setTimeout(() => {
-    row.remove();
-    if (!document.querySelector('#entryBody tr')) addRow();
-  }, 300);
-}
-
-function removeAll(){
-  if (!confirm('Remove all unsaved entries? This cannot be undone.')) return;
-  
-  const tbody = document.getElementById('entryBody');
-  Array.from(tbody.children).forEach((row, index) => {
-    setTimeout(() => {
-      row.style.animation = 'fadeOutDown 0.3s ease-out';
-      setTimeout(() => row.remove(), 300);
-    }, index * 50);
-  });
-  
-  setTimeout(() => addRow(), 500);
-  showToast('All entries cleared', 'warning');
-}
-
-// Add fadeOutDown animation
-style.textContent += `
-  @keyframes fadeOutDown {
-    from {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-  }
-`;
-
-function validateHours(input){
-  const val = parseFloat(input.value);
-  const isValid = val > 0 && val <= 24 && (val * 100) % 25 === 0;
-  input.classList.toggle('invalid-hours', !isValid);
-  
-  // Add validation message
-  let message = input.parentElement.querySelector('.validation-message');
-  if (!isValid && val !== 0 && !isNaN(val)) {
-    if (!message) {
-      message = document.createElement('div');
-      message.className = 'validation-message';
-      message.style.cssText = `
-        font-size: 0.75rem;
-        color: var(--danger);
-        margin-top: 4px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      `;
-      input.parentElement.appendChild(message);
-    }
-    message.innerHTML = '<span>⚠️</span> Hours must be 0.25-24.00 in 0.25 increments';
-  } else if (message) {
-    message.remove();
-  }
-}
-
-/* ===========================================================
-   Save single row -> POST to SharePoint, then move into Current Entries (with id)
-   Also prevents double-posts and surfaces Graph error messages
-   =========================================================== */
 async function saveRow(btn){
   const row = btn.closest('tr');
   if (!row || !validateRow(row)) return;
 
-  // disable button to prevent double-clicks
   setLoading(btn, true);
   btn.disabled = true;
   
   const inputs = row.querySelectorAll('input');
   const data = {
-    Title: inputs[0].value, // use Title for the list's primary text column
+    Title: inputs[0].value,
     Date: inputs[1].value,
     Task: inputs[2].value,
     Hours: parseFloat(inputs[3].value),
@@ -1239,21 +947,18 @@ async function saveRow(btn){
 
     if (!resp.ok){
       const errBody = await resp.text();
-      console.error('SharePoint POST error', resp.status, errBody);
       showToast('Failed to save entry. Please try again.', 'error');
       return;
     }
 
     const savedItem = await resp.json();
     
-    // Animate row out
     row.style.animation = 'fadeOutUp 0.3s ease-out';
     setTimeout(() => {
       row.remove();
       if (!document.querySelector('#entryBody tr')) addRow();
     }, 300);
 
-    // move to current entries with the returned id (so delete/edit works immediately)
     setTimeout(() => {
       moveToCurrent({
         id: savedItem.id,
@@ -1267,10 +972,8 @@ async function saveRow(btn){
     }, 150);
 
   } catch (err){
-    console.error('saveRow exception', err);
     showToast('Failed to save entry. Please check your connection.', 'error');
   } finally {
-    // ensure button re-enabled if row still exists
     if (document.body.contains(btn)) {
       setLoading(btn, false);
       btn.disabled = false;
@@ -1278,23 +981,6 @@ async function saveRow(btn){
   }
 }
 
-// Add fadeOutUp animation
-style.textContent += `
-  @keyframes fadeOutUp {
-    from {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateY(-20px);
-    }
-  }
-`;
-
-/* Save all: iterate each input-row and call saveRow on its Save button.
-   We skip invalid rows (validateRow handles it).
-*/
 async function saveAll(){
   const rows = Array.from(document.querySelectorAll('#entryBody tr'));
   const validRows = rows.filter(r => validateRow(r));
@@ -1306,7 +992,6 @@ async function saveAll(){
 
   showToast(`Saving ${validRows.length} entries...`, 'success');
   
-  // Save rows with small delays to avoid overwhelming the API
   for (let i = 0; i < validRows.length; i++) {
     const saveBtn = validRows[i].querySelector('button.btn-success');
     if (saveBtn) {
@@ -1314,13 +999,12 @@ async function saveAll(){
         setTimeout(async () => {
           await saveRow(saveBtn);
           resolve();
-        }, i * 200); // 200ms delay between saves
+        }, i * 200);
       });
     }
   }
 }
 
-/* validate input row */
 function validateRow(row){
   let ok = true;
   const inputs = row.querySelectorAll('input');
@@ -1344,19 +1028,16 @@ function validateRow(row){
 }
 
 /* ===========================================================
-   Current Entries rendering & grouping logic
+   Current Entries Display
    =========================================================== */
 function moveToCurrent(data){
-  // data: { id, name, date, task, hours, notes }
   const name = data.name || 'Unknown';
   const weekLabel = getWeekLabel(data.date || new Date().toISOString().slice(0,10));
 
-  // Remove empty state if present
   const container = document.getElementById('currentEntriesContainer');
   const emptyState = container.querySelector('.empty-state');
   if (emptyState) emptyState.remove();
 
-  // create group container for name if not exists
   if (!entryGroups[name]) {
     const groupDiv = document.createElement('details');
     groupDiv.open = true;
@@ -1373,7 +1054,6 @@ function moveToCurrent(data){
     entryGroups[name] = { container: groupDiv.querySelector('.group-weeks'), weeks: {} };
   }
 
-  // ensure week table present
   if (!entryGroups[name].weeks[weekLabel]) {
     const wrapper = document.createElement('div');
     wrapper.style.animation = 'fadeInUp 0.3s ease-out';
@@ -1407,7 +1087,6 @@ function moveToCurrent(data){
 
   const tbody = entryGroups[name].weeks[weekLabel];
 
-  // append row (store sp id on data-spid)
   const tr = document.createElement('tr');
   tr.dataset.spid = data.id || '';
   tr.style.animation = 'fadeInUp 0.3s ease-out';
@@ -1437,7 +1116,7 @@ function moveToCurrent(data){
 }
 
 /* ===========================================================
-   Delete from UI & SharePoint
+   Entry Management - Delete & Edit
    =========================================================== */
 async function deleteEntry(btn){
   const tr = btn.closest('tr');
@@ -1450,21 +1129,18 @@ async function deleteEntry(btn){
   setLoading(btn, true);
   btn.disabled = true;
 
-  // If spid exists, delete in SharePoint first
   if (spid){
     try {
       const url = `https://graph.microsoft.com/v1.0/sites/netorgft5961137.sharepoint.com:/sites/NewBalance984:/lists/TimeEntries/items/${spid}`;
       const resp = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` }});
       if (!resp.ok){
         const body = await resp.text();
-        console.error('DELETE error', resp.status, body);
         showToast('Failed to delete entry. Please try again.', 'error');
         setLoading(btn, false);
         btn.disabled = false;
         return;
       }
     } catch (err){
-      console.error('deleteEntry exception', err);
       showToast('Failed to delete entry. Please check your connection.', 'error');
       setLoading(btn, false);
       btn.disabled = false;
@@ -1472,7 +1148,6 @@ async function deleteEntry(btn){
     }
   }
   
-  // Animate out and remove from UI
   tr.style.animation = 'fadeOutDown 0.3s ease-out';
   setTimeout(() => {
     tr.remove();
@@ -1481,9 +1156,6 @@ async function deleteEntry(btn){
   }, 300);
 }
 
-/* ===========================================================
-   Inline edit logic (single-row only)
-   =========================================================== */
 function enterEditMode(editBtn){
   const tr = editBtn.closest('tr');
 
@@ -1491,14 +1163,12 @@ function enterEditMode(editBtn){
     showToast('Please save or cancel the currently editing row first.', 'warning');
     return;
   }
-  if (tr.classList.contains('editing')) return; // already in edit mode
+  if (tr.classList.contains('editing')) return;
 
   currentlyEditingRow = tr;
   tr.classList.add('editing');
 
-  // Save current cells so we can cancel
   const tds = tr.querySelectorAll('td');
-  // original values
   const orig = {
     name: tds[0].textContent,
     date: tds[1].textContent,
@@ -1508,14 +1178,12 @@ function enterEditMode(editBtn){
   };
   tr.dataset.orig = JSON.stringify(orig);
 
-  // Replace cells 0..4 with inputs
   tds[0].innerHTML = `<input type="text" value="${escapeHtml(orig.name)}" required>`;
   tds[1].innerHTML = `<input type="date" value="${escapeHtml(orig.date)}" required>`;
   tds[2].innerHTML = `<input type="text" value="${escapeHtml(orig.task)}" required>`;
   tds[3].innerHTML = `<input type="number" step="0.25" min="0" value="${parseFloat(orig.hours) || 0}" oninput="validateHours(this)" required>`;
   tds[4].innerHTML = `<input type="text" value="${escapeHtml(orig.notes)}">`;
 
-  // Replace actions with Save & Cancel
   tds[5].innerHTML = `
     <button class="btn btn-success btn-sm" onclick="saveInlineEdit(this)">
       <span>💾</span>
@@ -1533,7 +1201,6 @@ async function saveInlineEdit(saveBtn){
   if (!tr || !tr.classList.contains('editing')) return;
   const inputs = tr.querySelectorAll('input');
   
-  // validation: make sure required fields are present
   if (!inputs[0].value || !inputs[1].value || !inputs[2].value || !inputs[3].value){
     showToast('Please fill Name, Date, Task, and Hours before saving.', 'error');
     return;
@@ -1545,7 +1212,6 @@ async function saveInlineEdit(saveBtn){
     return;
   }
 
-  // Collect updated values
   const updated = {
     Title: inputs[0].value,
     Date: inputs[1].value,
@@ -1555,14 +1221,12 @@ async function saveInlineEdit(saveBtn){
   };
 
   const spid = tr.dataset.spid;
-  // If there's no spid, can't edit (shouldn't happen since loaded entries have ids)
   if (!spid){
     showToast('This entry does not have a SharePoint ID and cannot be edited.', 'error');
     cancelInlineEdit(saveBtn);
     return;
   }
 
-  // Disable save button to prevent double-click
   setLoading(saveBtn, true);
   saveBtn.disabled = true;
 
@@ -1579,18 +1243,15 @@ async function saveInlineEdit(saveBtn){
 
     if (!resp.ok){
       const errText = await resp.text();
-      console.error('PATCH error', resp.status, errText);
       showToast('Failed to update entry. Please try again.', 'error');
       setLoading(saveBtn, false);
       saveBtn.disabled = false;
       return;
     }
 
-    // success: update UI cells and end edit mode
     tr.classList.remove('editing');
     currentlyEditingRow = null;
 
-    // Update row display (hours formatted)
     tr.children[0].textContent = updated.Title;
     tr.children[1].textContent = updated.Date;
     tr.children[2].textContent = updated.Task;
@@ -1601,7 +1262,6 @@ async function saveInlineEdit(saveBtn){
     `;
     tr.children[4].textContent = updated.Notes;
 
-    // restore actions
     tr.children[5].innerHTML = `
       <button class="btn btn-secondary btn-sm" onclick="enterEditMode(this)">
         <span>✏️</span>
@@ -1613,7 +1273,6 @@ async function saveInlineEdit(saveBtn){
       </button>
     `;
 
-    // Update totals for the week
     const name = updated.Title;
     const weekLabel = tr.closest('tbody').querySelector('.week-header').textContent.replace('📅 ', '').trim();
     updateTotal(name, weekLabel);
@@ -1621,7 +1280,6 @@ async function saveInlineEdit(saveBtn){
     showToast('Entry updated successfully!', 'success');
 
   } catch (err){
-    console.error('saveInlineEdit exception', err);
     showToast('Failed to update entry. Please check your connection.', 'error');
     setLoading(saveBtn, false);
     saveBtn.disabled = false;
@@ -1633,7 +1291,6 @@ function cancelInlineEdit(cancelBtn){
   if (!tr || !tr.classList.contains('editing')) return;
   const orig = JSON.parse(tr.dataset.orig || '{}');
 
-  // restore cells
   tr.children[0].textContent = orig.name;
   tr.children[1].textContent = orig.date;
   tr.children[2].textContent = orig.task;
@@ -1644,7 +1301,6 @@ function cancelInlineEdit(cancelBtn){
   `;
   tr.children[4].textContent = orig.notes;
 
-  // restore actions
   tr.children[5].innerHTML = `
     <button class="btn btn-secondary btn-sm" onclick="enterEditMode(this)">
       <span>✏️</span>
@@ -1660,7 +1316,7 @@ function cancelInlineEdit(cancelBtn){
 }
 
 /* ===========================================================
-   Totals and helpers
+   Utility Functions
    =========================================================== */
 function updateTotal(name, weekLabel){
   const tbody = entryGroups[name] && entryGroups[name].weeks[weekLabel];
@@ -1690,7 +1346,6 @@ function updateTotal(name, weekLabel){
     `;
     tbody.appendChild(totalRow);
   } else {
-    // Update existing total
     const indicator = totalRow.querySelector('.status-indicator');
     indicator.textContent = `${total.toFixed(2)}h`;
     indicator.className = `status-indicator ${total >= 40 ? 'status-success' : 'status-warning'}`;
@@ -1715,13 +1370,41 @@ function getWeekLabel(dateStr){
   return `Week of ${formatDate(start)} - ${formatDate(end)}`;
 }
 
-/* small escaping helper for safety in innerHTML creation */
-function escapeHtml(str){
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+/* ===========================================================
+   Event Listeners
+   =========================================================== */
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof msal === 'undefined') {
+    const signInBtn = document.getElementById('signin-btn');
+    if (signInBtn) {
+      signInBtn.innerHTML = '<span>❌</span> Authentication library failed to load';
+      signInBtn.disabled = true;
+    }
+    return;
+  }
+  
+  // Set up event listeners
+  const signInBtn = document.getElementById('signin-btn');
+  if (signInBtn) {
+    signInBtn.addEventListener('click', signIn);
+  }
+  
+  const addTimeBtn = document.getElementById('add-time-btn');
+  if (addTimeBtn) {
+    addTimeBtn.addEventListener('click', () => addRow());
+  }
+  
+  const saveAllBtn = document.getElementById('save-all-btn');
+  if (saveAllBtn) {
+    saveAllBtn.addEventListener('click', saveAll);
+  }
+  
+  const removeAllBtn = document.getElementById('remove-all-btn');
+  if (removeAllBtn) {
+    removeAllBtn.addEventListener('click', removeAll);
+  }
+});
+</script>
+
+</body>
+</html>
