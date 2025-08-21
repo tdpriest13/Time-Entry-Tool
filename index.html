@@ -682,6 +682,25 @@ let accessToken = null;
 const entryGroups = {};
 let currentlyEditingRow = null;
 
+// Predefined list of names for the dropdown
+const availableNames = [
+  'John Smith',
+  'Jane Doe', 
+  'Mike Johnson',
+  'Sarah Wilson',
+  'David Brown',
+  'Lisa Davis',
+  'Chris Miller',
+  'Amy Taylor'
+];
+
+// Function to generate name options HTML
+function generateNameOptions(selectedValue = '') {
+  return availableNames.map(name => 
+    `<option value="${escapeHtml(name)}" ${selectedValue === name ? 'selected' : ''}>${escapeHtml(name)}</option>`
+  ).join('');
+}
+
 /* ===========================================================
    Utility Functions
    =========================================================== */
@@ -913,7 +932,12 @@ function addRow(data = {}){
   const row = document.createElement('tr');
   row.style.animation = 'fadeInUp 0.3s ease-out';
   row.innerHTML = `
-    <td><input type="text" value="${escapeHtml(data.name||'')}" required placeholder="Enter your name"></td>
+    <td>
+      <select required>
+        <option value="">Select your name...</option>
+        ${generateNameOptions(data.name)}
+      </select>
+    </td>
     <td><input type="date" value="${data.date||''}" required></td>
     <td><input type="text" value="${escapeHtml(data.task||'')}" required placeholder="What did you work on?"></td>
     <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)" placeholder="0.00"></td>
@@ -940,13 +964,14 @@ function addRow(data = {}){
 
 function copyRow(btn){
   const row = btn.closest('tr');
+  const nameSelect = row.querySelector('select');
   const inputs = row.querySelectorAll('input');
   addRow({
-    name: inputs[0].value,
-    date: inputs[1].value,
-    task: inputs[2].value,
-    hours: inputs[3].value,
-    notes: inputs[4].value
+    name: nameSelect.value,
+    date: inputs[0].value,
+    task: inputs[1].value,
+    hours: inputs[2].value,
+    notes: inputs[3].value
   });
   showToast('Row copied!', 'success', 2000);
 }
@@ -1002,13 +1027,14 @@ async function saveRow(btn){
   setLoading(btn, true);
   btn.disabled = true;
   
+  const nameSelect = row.querySelector('select');
   const inputs = row.querySelectorAll('input');
   const data = {
-    Title: inputs[0].value,
-    Date: inputs[1].value,
-    Task: inputs[2].value,
-    Hours: parseFloat(inputs[3].value),
-    Notes: inputs[4].value
+    Title: nameSelect.value,
+    Date: inputs[0].value,
+    Task: inputs[1].value,
+    Hours: parseFloat(inputs[2].value),
+    Notes: inputs[3].value
   };
 
   try {
@@ -1086,8 +1112,16 @@ async function saveAll(){
 
 function validateRow(row){
   let ok = true;
+  const nameSelect = row.querySelector('select');
   const inputs = row.querySelectorAll('input');
   
+  // Validate name selection
+  if (!nameSelect.value) {
+    ok = false;
+    nameSelect.style.animation = 'shake 0.3s ease-in-out';
+  }
+  
+  // Validate other inputs
   inputs.forEach(inp => {
     if (inp.type === 'number') {
       validateHours(inp);
@@ -1257,7 +1291,12 @@ function enterEditMode(editBtn){
   };
   tr.dataset.orig = JSON.stringify(orig);
 
-  tds[0].innerHTML = `<input type="text" value="${escapeHtml(orig.name)}" required>`;
+  tds[0].innerHTML = `
+    <select required>
+      <option value="">Select your name...</option>
+      ${generateNameOptions(orig.name)}
+    </select>
+  `;
   tds[1].innerHTML = `<input type="date" value="${escapeHtml(orig.date)}" required>`;
   tds[2].innerHTML = `<input type="text" value="${escapeHtml(orig.task)}" required>`;
   tds[3].innerHTML = `<input type="number" step="0.25" min="0" value="${parseFloat(orig.hours) || 0}" oninput="validateHours(this)" required>`;
@@ -1278,25 +1317,26 @@ function enterEditMode(editBtn){
 async function saveInlineEdit(saveBtn){
   const tr = saveBtn.closest('tr');
   if (!tr || !tr.classList.contains('editing')) return;
+  const nameSelect = tr.querySelector('select');
   const inputs = tr.querySelectorAll('input');
   
-  if (!inputs[0].value || !inputs[1].value || !inputs[2].value || !inputs[3].value){
+  if (!nameSelect.value || !inputs[0].value || !inputs[1].value || !inputs[2].value){
     showToast('Please fill Name, Date, Task, and Hours before saving.', 'error');
     return;
   }
   
-  validateHours(inputs[3]);
-  if (inputs[3].classList.contains('invalid-hours')){
+  validateHours(inputs[2]);
+  if (inputs[2].classList.contains('invalid-hours')){
     showToast('Hours must be >0, ≤24, in 0.25 increments.', 'error');
     return;
   }
 
   const updated = {
-    Title: inputs[0].value,
-    Date: inputs[1].value,
-    Task: inputs[2].value,
-    Hours: parseFloat(inputs[3].value),
-    Notes: inputs[4].value
+    Title: nameSelect.value,
+    Date: inputs[0].value,
+    Task: inputs[1].value,
+    Hours: parseFloat(inputs[2].value),
+    Notes: inputs[3].value
   };
 
   const spid = tr.dataset.spid;
