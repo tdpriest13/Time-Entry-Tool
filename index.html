@@ -733,11 +733,70 @@ function setLoading(element, isLoading) {
 /* ===========================================================
    Authentication
    =========================================================== */
+async function initializeApp() {
+  if (typeof msal === 'undefined') {
+    showAuthError();
+    return;
+  }
+
+  try {
+    // Check if user is already signed in
+    const accounts = msalInstance.getAllAccounts();
+    
+    if (accounts.length > 0) {
+      // User has an account, try to get token silently
+      try {
+        const tokenResp = await msalInstance.acquireTokenSilent({
+          ...tokenRequest,
+          account: accounts[0]
+        });
+        
+        accessToken = tokenResp.accessToken;
+        showMainUI();
+        showToast('Welcome back! Automatically signed in.', 'success');
+        addRow();
+        await loadCurrentEntriesFromSharePoint();
+        return;
+      } catch (silentError) {
+        // Silent token acquisition failed, but user still has account
+        // Try interactive sign-in
+        if (silentError.errorCode === 'consent_required' || 
+            silentError.errorCode === 'interaction_required') {
+          try {
+            const tokenResp = await msalInstance.acquireTokenSilent({
+              ...tokenRequest,
+              account: accounts[0],
+              forceRefresh: true
+            });
+            
+            accessToken = tokenResp.accessToken;
+            showMainUI();
+            showToast('Welcome back! Automatically signed in.', 'success');
+            addRow();
+            await loadCurrentEntriesFromSharePoint();
+            return;
+          } catch (refreshError) {
+            // If refresh also fails, show sign-in button
+            console.log('Auto sign-in failed, showing manual sign-in option');
+          }
+        }
+      }
+    }
+    
+    // No account found or auto sign-in failed - show sign-in UI
+    showSignInUI();
+    
+  } catch (error) {
+    console.error('Initialization error:', error);
+    showSignInUI();
+  }
+}
+
 async function signIn(){
   const signInBtn = document.getElementById('signin-btn');
   
   if (typeof msal === 'undefined') {
-    showToast('Authentication library failed to load. Please refresh the page.', 'error');
+    showAuthError();
     return;
   }
   
@@ -745,22 +804,23 @@ async function signIn(){
   
   try {
     const loginResult = await msalInstance.loginPopup(tokenRequest);
-    const tokenResp = await msalInstance.acquireTokenSilent({ ...tokenRequest, account: loginResult.account });
+    const tokenResp = await msalInstance.acquireTokenSilent({ 
+      ...tokenRequest, 
+      account: loginResult.account 
+    });
+    
     accessToken = tokenResp.accessToken;
-
-    document.getElementById('signin-container').classList.add('hidden');
-    document.getElementById('main-ui').classList.remove('hidden');
-
+    showMainUI();
     showToast('Successfully signed in!', 'success');
     addRow();
     await loadCurrentEntriesFromSharePoint();
+    
   } catch(err){
     if (err && err.errorCode === "consent_required"){
       try {
         const popupResp = await msalInstance.acquireTokenPopup(tokenRequest);
         accessToken = popupResp.accessToken;
-        document.getElementById('signin-container').classList.add('hidden');
-        document.getElementById('main-ui').classList.remove('hidden');
+        showMainUI();
         showToast('Successfully signed in!', 'success');
         addRow();
         await loadCurrentEntriesFromSharePoint();
@@ -776,6 +836,25 @@ async function signIn(){
   } finally {
     setLoading(signInBtn, false);
   }
+}
+
+function showSignInUI() {
+  document.getElementById('signin-container').classList.remove('hidden');
+  document.getElementById('main-ui').classList.add('hidden');
+}
+
+function showMainUI() {
+  document.getElementById('signin-container').classList.add('hidden');
+  document.getElementById('main-ui').classList.remove('hidden');
+}
+
+function showAuthError() {
+  const signInBtn = document.getElementById('signin-btn');
+  if (signInBtn) {
+    signInBtn.innerHTML = '<span>❌</span> Authentication library failed to load';
+    signInBtn.disabled = true;
+  }
+  showToast('Authentication library failed to load. Please refresh the page.', 'error');
 }
 
 /* ===========================================================
@@ -1373,15 +1452,9 @@ function getWeekLabel(dateStr){
 /* ===========================================================
    Event Listeners
    =========================================================== */
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof msal === 'undefined') {
-    const signInBtn = document.getElementById('signin-btn');
-    if (signInBtn) {
-      signInBtn.innerHTML = '<span>❌</span> Authentication library failed to load';
-      signInBtn.disabled = true;
-    }
-    return;
-  }
+document.addEventListener('DOMContentLoaded', async function() {
+  // Initialize the app - this will auto-sign in if possible
+  await initializeApp();
   
   // Set up event listeners
   const signInBtn = document.getElementById('signin-btn');
