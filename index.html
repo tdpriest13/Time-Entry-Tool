@@ -940,7 +940,7 @@ function addRow(data = {}){
     </td>
     <td><input type="date" value="${data.date||''}" required></td>
     <td><input type="text" value="${escapeHtml(data.task||'')}" required placeholder="What did you work on?"></td>
-    <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)" placeholder="0.00"></td>
+    <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)" onfocus="this.select()" placeholder="0.00"></td>
     <td><input type="text" value="${escapeHtml(data.notes||'')}" placeholder="Optional notes"></td>
     <td class="actions-inline">
       <button class="btn btn-success btn-sm" onclick="saveRow(this)">
@@ -1299,7 +1299,7 @@ function enterEditMode(editBtn){
   `;
   tds[1].innerHTML = `<input type="date" value="${escapeHtml(orig.date)}" required>`;
   tds[2].innerHTML = `<input type="text" value="${escapeHtml(orig.task)}" required>`;
-  tds[3].innerHTML = `<input type="number" step="0.25" min="0" value="${parseFloat(orig.hours) || 0}" oninput="validateHours(this)" required>`;
+  tds[3].innerHTML = `<input type="number" step="0.25" min="0" value="${parseFloat(orig.hours) || 0}" oninput="validateHours(this)" onfocus="this.select()" required>`;
   tds[4].innerHTML = `<input type="text" value="${escapeHtml(orig.notes)}">`;
 
   tds[5].innerHTML = `
