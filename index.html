@@ -927,7 +927,7 @@ function addRow(data = {}){
   row.innerHTML = `
     <td>
       <select required>
-        <option value="">Select your name...</option>
+        <option value="">Name</option>
         ${generateNameOptions(data.name)}
       </select>
     </td>
@@ -1286,7 +1286,7 @@ function enterEditMode(editBtn){
 
   tds[0].innerHTML = `
     <select required>
-      <option value="">Select your name...</option>
+      <option value="">Name</option>
       ${generateNameOptions(orig.name)}
     </select>
   `;
