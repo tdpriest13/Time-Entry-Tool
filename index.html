@@ -366,6 +366,30 @@
       border-color: var(--danger) !important;
       background: var(--danger-light) !important;
       animation: shake 0.3s ease-in-out;
+      position: relative;
+    }
+
+    .invalid-hours::after {
+      content: "Hours must be 0.25-24.00 in 0.25 increments";
+      position: absolute;
+      top: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--danger);
+      color: white;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      white-space: nowrap;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .invalid-hours:focus::after,
+    .invalid-hours:hover::after {
+      opacity: 1;
     }
 
 
@@ -1040,18 +1064,12 @@ function removeAll(){
 function validateHours(input){
   const val = parseFloat(input.value);
   const isValid = val > 0 && val <= 24 && (val * 100) % 25 === 0;
-  input.classList.toggle('invalid-hours', !isValid);
+  input.classList.toggle('invalid-hours', !isValid && val !== 0 && !isNaN(val));
   
-  let message = input.parentElement.querySelector('.validation-message');
-  if (!isValid && val !== 0 && !isNaN(val)) {
-    if (!message) {
-      message = document.createElement('div');
-      message.className = 'validation-message';
-      input.parentElement.appendChild(message);
-    }
-    message.innerHTML = '<span>⚠️</span> Hours must be 0.25-24.00 in 0.25 increments';
-  } else if (message) {
-    message.remove();
+  // Remove any old validation messages that might exist
+  const existingMessage = input.parentElement.querySelector('.validation-message');
+  if (existingMessage) {
+    existingMessage.remove();
   }
 }
 
