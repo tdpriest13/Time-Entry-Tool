@@ -382,14 +382,13 @@
       font-size: 0.75rem;
       white-space: nowrap;
       z-index: 1000;
-      opacity: 0;
+      opacity: 1;
       pointer-events: none;
       transition: opacity 0.2s ease;
     }
 
-    .invalid-hours:focus::after,
-    .invalid-hours:hover::after {
-      opacity: 1;
+    .invalid-hours:not(:focus)::after {
+      opacity: 0;
     }
 
 
