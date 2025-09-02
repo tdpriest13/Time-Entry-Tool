@@ -366,13 +366,17 @@
       border-color: var(--danger) !important;
       background: var(--danger-light) !important;
       animation: shake 0.3s ease-in-out;
+    }
+
+    /* Hours column needs relative positioning for tooltip */
+    td:nth-child(4) {
       position: relative;
     }
 
-    .invalid-hours::after {
-      content: "Hours must be 0.25-24.00 in 0.25 increments";
+    /* Validation tooltip that appears above the table cell */
+    .hours-error-tooltip {
       position: absolute;
-      top: -35px;
+      top: -40px;
       left: 50%;
       transform: translateX(-50%);
       background: var(--danger);
@@ -382,13 +386,17 @@
       font-size: 0.75rem;
       white-space: nowrap;
       z-index: 1000;
-      opacity: 1;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
+      box-shadow: var(--shadow-md);
     }
 
-    .invalid-hours:not(:focus)::after {
-      opacity: 0;
+    .hours-error-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+      border-top-color: var(--danger);
     }
 
 
@@ -1063,12 +1071,29 @@ function removeAll(){
 function validateHours(input){
   const val = parseFloat(input.value);
   const isValid = val > 0 && val <= 24 && (val * 100) % 25 === 0;
-  input.classList.toggle('invalid-hours', !isValid && val !== 0 && !isNaN(val));
+  const shouldShowError = !isValid && val !== 0 && !isNaN(val);
   
-  // Remove any old validation messages that might exist
-  const existingMessage = input.parentElement.querySelector('.validation-message');
-  if (existingMessage) {
-    existingMessage.remove();
+  input.classList.toggle('invalid-hours', shouldShowError);
+  
+  // Remove any existing tooltip
+  const existingTooltip = input.parentElement.querySelector('.hours-error-tooltip');
+  if (existingTooltip) {
+    existingTooltip.remove();
+  }
+  
+  // Add tooltip if invalid
+  if (shouldShowError) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'hours-error-tooltip';
+    tooltip.textContent = 'Hours must be 0.25-24.00 in 0.25 increments';
+    input.parentElement.appendChild(tooltip);
+    
+    // Auto-remove tooltip after 4 seconds
+    setTimeout(() => {
+      if (tooltip.parentElement) {
+        tooltip.remove();
+      }
+    }, 4000);
   }
 }
 
