@@ -368,37 +368,6 @@
       animation: shake 0.3s ease-in-out;
     }
 
-    /* Hours column needs relative positioning for tooltip */
-    td:nth-child(4) {
-      position: relative;
-    }
-
-    /* Validation tooltip that appears above the table cell */
-    .hours-error-tooltip {
-      position: absolute;
-      top: -40px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--danger);
-      color: white;
-      padding: 6px 10px;
-      border-radius: var(--radius-sm);
-      font-size: 0.75rem;
-      white-space: nowrap;
-      z-index: 1000;
-      box-shadow: var(--shadow-md);
-    }
-
-    .hours-error-tooltip::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 4px solid transparent;
-      border-top-color: var(--danger);
-    }
-
 
 
     /* Status Indicators */
@@ -731,33 +700,10 @@ const availableNames = [
   'Amy Taylor'
 ];
 
-// Predefined list of tasks for the dropdown
-const availableTasks = [
-  'Development',
-  'Testing',
-  'Code Review',
-  'Documentation',
-  'Meeting',
-  'Planning',
-  'Research',
-  'Bug Fixing',
-  'Training',
-  'Support',
-  'Deployment',
-  'Analysis'
-];
-
 // Function to generate name options HTML
 function generateNameOptions(selectedValue = '') {
   return availableNames.map(name => 
     `<option value="${escapeHtml(name)}" ${selectedValue === name ? 'selected' : ''}>${escapeHtml(name)}</option>`
-  ).join('');
-}
-
-// Function to generate task options HTML
-function generateTaskOptions(selectedValue = '') {
-  return availableTasks.map(task => 
-    `<option value="${escapeHtml(task)}" ${selectedValue === task ? 'selected' : ''}>${escapeHtml(task)}</option>`
   ).join('');
 }
 
@@ -999,12 +945,7 @@ function addRow(data = {}){
       </select>
     </td>
     <td><input type="date" value="${data.date||''}" required></td>
-    <td>
-      <select required>
-        <option value="">Task</option>
-        ${generateTaskOptions(data.task)}
-      </select>
-    </td>
+    <td><input type="text" value="${escapeHtml(data.task||'')}" required placeholder="What did you work on?"></td>
     <td><input type="number" step="0.25" min="0" value="${(data.hours ?? 0)}" oninput="validateHours(this)" onfocus="this.select()" placeholder="0.00"></td>
     <td><input type="text" value="${escapeHtml(data.notes||'')}" placeholder="Optional notes"></td>
     <td class="actions-inline">
@@ -1030,14 +971,13 @@ function addRow(data = {}){
 function copyRow(btn){
   const row = btn.closest('tr');
   const nameSelect = row.querySelector('select');
-  const taskSelect = row.querySelectorAll('select')[1]; // Second select is task
   const inputs = row.querySelectorAll('input');
   addRow({
     name: nameSelect.value,
     date: inputs[0].value,
-    task: taskSelect.value,
-    hours: inputs[1].value,
-    notes: inputs[2].value
+    task: inputs[1].value,
+    hours: inputs[2].value,
+    notes: inputs[3].value
   });
   showToast('Row copied!', 'success', 2000);
 }
@@ -1105,14 +1045,13 @@ async function saveRow(btn){
   btn.disabled = true;
   
   const nameSelect = row.querySelector('select');
-  const taskSelect = row.querySelectorAll('select')[1]; // Second select is task
   const inputs = row.querySelectorAll('input');
   const data = {
     Title: nameSelect.value,
     Date: inputs[0].value,
-    Task: taskSelect.value,
-    Hours: parseFloat(inputs[1].value),
-    Notes: inputs[2].value
+    Task: inputs[1].value,
+    Hours: parseFloat(inputs[2].value),
+    Notes: inputs[3].value
   };
 
   try {
@@ -1191,19 +1130,12 @@ async function saveAll(){
 function validateRow(row){
   let ok = true;
   const nameSelect = row.querySelector('select');
-  const taskSelect = row.querySelectorAll('select')[1]; // Second select is task
   const inputs = row.querySelectorAll('input');
   
   // Validate name selection
   if (!nameSelect.value) {
     ok = false;
     nameSelect.style.animation = 'shake 0.3s ease-in-out';
-  }
-  
-  // Validate task selection
-  if (!taskSelect.value) {
-    ok = false;
-    taskSelect.style.animation = 'shake 0.3s ease-in-out';
   }
   
   // Validate other inputs
@@ -1383,12 +1315,7 @@ function enterEditMode(editBtn){
     </select>
   `;
   tds[1].innerHTML = `<input type="date" value="${escapeHtml(orig.date)}" required>`;
-  tds[2].innerHTML = `
-    <select required>
-      <option value="">Task</option>
-      ${generateTaskOptions(orig.task)}
-    </select>
-  `;
+  tds[2].innerHTML = `<input type="text" value="${escapeHtml(orig.task)}" required>`;
   tds[3].innerHTML = `<input type="number" step="0.25" min="0" value="${parseFloat(orig.hours) || 0}" oninput="validateHours(this)" onfocus="this.select()" required>`;
   tds[4].innerHTML = `<input type="text" value="${escapeHtml(orig.notes)}">`;
 
