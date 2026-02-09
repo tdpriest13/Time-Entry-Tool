@@ -42,7 +42,7 @@ class AdminManager {
 
       this.userAccess = userAccess.map(item => ({
         id: item.id,
-        userEmail: item.fields.UserEmail,
+        userEmail: item.fields.Title, 
         clientCode: item.fields.ClientCode
       }));
 
@@ -425,7 +425,7 @@ class AdminManager {
 
     try {
       await sharePointAPI.createItem(CONFIG.SHAREPOINT.lists.userClientAccess, {
-        UserEmail: email,
+        Title: email,
         ClientCode: clientCode
       });
 
