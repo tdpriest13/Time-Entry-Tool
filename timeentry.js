@@ -236,7 +236,7 @@ class TimeEntryManager {
 
     try {
       const entry = {
-        Name: authManager.getUserEmail(),
+        Title: authManager.getUserEmail(),
         Date: date,
         ClientCode: clientCode,
         ProjectName: projectName,
