@@ -75,7 +75,7 @@ class TimeEntryManager {
         .filter(item => item.fields.Name?.toLowerCase() === userEmail.toLowerCase())
         .map(item => ({
           id: item.id,
-          name: item.fields.Name,
+          name: item.fields.Title,
           date: item.fields.Date,
           clientCode: item.fields.ClientCode,
           projectName: item.fields.Title,
