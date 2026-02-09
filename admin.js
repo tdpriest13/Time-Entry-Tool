@@ -276,11 +276,11 @@ class AdminManager {
       this.closeForm();
       await this.loadAllData();
       this.renderClientTable();
+      this.renderAdminDashboard();
     } catch (err) {
       console.error('Error saving client:', err);
       UI.showError('Failed to save client. Please try again.');
-      this.renderAdminDashboard();
-    }
+          }
   }
 
   showProjectForm(projectId = null) {
@@ -357,11 +357,11 @@ class AdminManager {
       this.closeForm();
       await this.loadAllData();
       this.renderProjectTable();
+      this.renderAdminDashboard();
     } catch (err) {
       console.error('Error saving project:', err);
       UI.showError('Failed to save project. Please try again.');
-      this.renderAdminDashboard();
-    }
+          }
   }
 
   showUserAccessForm() {
@@ -435,11 +435,11 @@ class AdminManager {
       this.closeForm();
       await this.loadAllData();
       this.renderUserAccessTable();
+      this.renderAdminDashboard();
     } catch (err) {
       console.error('Error saving user access:', err);
       UI.showError('Failed to assign user. Please try again.');
-      this.renderAdminDashboard();
-    }
+          }
   }
 
   async deleteClient(clientId) {
