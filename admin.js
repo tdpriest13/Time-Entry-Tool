@@ -280,8 +280,7 @@ class AdminManager {
       console.error('Error saving client:', err);
       UI.showError('Failed to save client. Please try again.');
           }
-    this.renderAdminDashboard();
-  }
+      }
 
   showProjectForm(projectId = null) {
     const project = projectId ? this.projects.find(p => p.id === projectId) : null;
