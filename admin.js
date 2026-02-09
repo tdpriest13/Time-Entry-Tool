@@ -28,7 +28,7 @@ class AdminManager {
 
       this.clients = clients.map(item => ({
         id: item.id,
-        name: item.fields.ClientName,
+        name: item.fields.Title,
         code: item.fields.ClientCode,
         description: item.fields.ClientDescription
       }));
