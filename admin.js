@@ -261,7 +261,7 @@ class AdminManager {
     try {
       const clientData = {
         ClientCode: code,
-        ClientName: name,
+        Title: name,
         ClientDescription: description
       };
 
@@ -341,7 +341,7 @@ class AdminManager {
     try {
       const projectData = {
         ClientCode: clientCode,
-        ProjectName: name,
+        Title: name,
         ProjectDescription: description
       };
 
