@@ -279,6 +279,7 @@ class AdminManager {
     } catch (err) {
       console.error('Error saving client:', err);
       UI.showError('Failed to save client. Please try again.');
+      this.renderAdminDashboard();
     }
   }
 
@@ -359,6 +360,7 @@ class AdminManager {
     } catch (err) {
       console.error('Error saving project:', err);
       UI.showError('Failed to save project. Please try again.');
+      this.renderAdminDashboard();
     }
   }
 
@@ -436,6 +438,7 @@ class AdminManager {
     } catch (err) {
       console.error('Error saving user access:', err);
       UI.showError('Failed to assign user. Please try again.');
+      this.renderAdminDashboard();
     }
   }
 
