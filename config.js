@@ -2,7 +2,7 @@
 const CONFIG = {
   // Admin users (full access to all clients/projects)
   ADMINS: [
-    'taylor.priest@undocked.net',
+    'taylor.priest@undocked.net'
     // Add more admin emails here
   ],
   
