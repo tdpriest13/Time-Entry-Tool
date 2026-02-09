@@ -28,7 +28,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h1>⏱️ Undocked</h1>
-        <div class="user-email" id="userEmail">Loading...</div>
+        <div class="user-email" id="currentUserEmail">Loading...</div>
       </div>
 
       <nav class="sidebar-nav">
@@ -127,7 +127,7 @@
     // Initialize App
     function initializeApp(authResult) {
       // Display user email
-      document.getElementById('userEmail').textContent = authResult.user.username;
+      document.getElementById('currentUserEmail').textContent = authResult.user.username;
 
       // Show admin nav if admin
       if (authResult.isAdmin) {
