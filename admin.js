@@ -371,7 +371,7 @@ class AdminManager {
         <form id="userAccessForm">
           <div class="form-group">
             <label class="form-label required">User Email</label>
-            <input type="email" id="userEmail" class="form-input" required placeholder="user@company.com" />
+            <input type="email" id="assignUserEmail" class="form-input" required placeholder="user@company.com" />
           </div>
           <div class="form-group">
             <label class="form-label required">Client</label>
@@ -400,7 +400,7 @@ class AdminManager {
   }
 
   async saveUserAccess() {
-    const email = document.getElementById('userEmail').value.trim().toLowerCase();
+    const email = document.getElementById('assignUserEmail').value.trim().toLowerCase();
     const clientCode = document.getElementById('accessClientCode').value;
 
     if (!Validation.validateEmail(email)) {
