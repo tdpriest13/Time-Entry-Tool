@@ -28,7 +28,7 @@ class TimeEntryManager {
       
       // Get client codes for this user
       const userClientCodes = accessRecords
-        .filter(item => item.fields.UserEmail?.toLowerCase() === userEmail.toLowerCase())
+        .filter(item => item.fields.Title?.toLowerCase() === userEmail.toLowerCase())
         .map(item => item.fields.ClientCode);
 
       // Load full client details
