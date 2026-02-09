@@ -37,7 +37,7 @@ class TimeEntryManager {
         .filter(item => userClientCodes.includes(item.fields.ClientCode))
         .map(item => ({
           id: item.id,
-          name: item.fields.ClientName,
+          name: item.fields.Title,
           code: item.fields.ClientCode,
           description: item.fields.ClientDescription
         }));
@@ -54,7 +54,7 @@ class TimeEntryManager {
       const allProjects = await sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.projects);
       this.projects = allProjects.map(item => ({
         id: item.id,
-        name: item.fields.ProjectName,
+        name: item.fields.Title,
         description: item.fields.ProjectDescription,
         clientCode: item.fields.ClientCode
       }));
@@ -78,7 +78,7 @@ class TimeEntryManager {
           name: item.fields.Name,
           date: item.fields.Date,
           clientCode: item.fields.ClientCode,
-          projectName: item.fields.ProjectName,
+          projectName: item.fields.Title,
           taskActivity: item.fields.TaskActivity,
           hours: parseFloat(item.fields.Hours) || 0,
           notes: item.fields.Notes || ''
