@@ -72,7 +72,7 @@ class TimeEntryManager {
       const allEntries = await sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.timeEntries);
       
       this.timeEntries = allEntries
-        .filter(item => item.fields.Name?.toLowerCase() === userEmail.toLowerCase())
+        .filter(item => item.fields.Title?.toLowerCase() === userEmail.toLowerCase())
         .map(item => ({
           id: item.id,
           name: item.fields.Title,
