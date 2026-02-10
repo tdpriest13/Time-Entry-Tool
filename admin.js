@@ -289,7 +289,11 @@ class AdminManager {
   showProjectForm(projectId = null) {
     const project = projectId ? this.projects.find(p => p.id === projectId) : null;
     const isEdit = !!project;
-
+    const stripHtml = (html) => {
+    const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+};
     const formHtml = `
       <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 500px; box-shadow: var(--shadow-lg);">
         <div class="card-header">
@@ -313,7 +317,7 @@ class AdminManager {
           </div>
           <div class="form-group">
             <label class="form-label required">Description</label>
-            <textarea id="projectDescription" class="form-input" required rows="3">${project?.description || ''}</textarea>
+            <textarea id="projectDescription" class="form-input" required rows="3">${project ? stripHtml(project.description) : ''}</textarea>
           </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">Save</button>
