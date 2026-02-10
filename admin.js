@@ -212,7 +212,11 @@ class AdminManager {
   showClientForm(clientId = null) {
     const client = clientId ? this.clients.find(c => c.id === clientId) : null;
     const isEdit = !!client;
-
+    const stripHtml = (html) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+    };
     const formHtml = `
       <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 500px; box-shadow: var(--shadow-lg);">
         <div class="card-header">
@@ -229,7 +233,7 @@ class AdminManager {
           </div>
           <div class="form-group">
             <label class="form-label required">Description</label>
-            <textarea id="clientDescription" class="form-input" required rows="3">${client?.description || ''}</textarea>
+            <textarea id="clientDescription" class="form-input" required rows="3">${client ? stripHtml(client.description) : ''}</textarea>
           </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">Save</button>
