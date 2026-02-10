@@ -35,7 +35,7 @@ class AdminManager {
 
       this.projects = projects.map(item => ({
         id: item.id,
-        name: item.fields.ProjectName,
+        name: item.fields.Title,
         description: item.fields.ProjectDescription,
         clientCode: item.fields.ClientCode
       }));
