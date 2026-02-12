@@ -44,7 +44,8 @@ class AdminManager {
       this.userAccess = userAccess.map(item => ({
         id: item.id,
         userEmail: item.fields.Title, 
-        clientCode: item.fields.ClientCode
+        clientCode: item.fields.ClientCode,
+        team: item.fields.Team || 'Onshore'
       }));
 
       console.log('Admin data loaded');
