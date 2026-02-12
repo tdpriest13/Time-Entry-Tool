@@ -149,6 +149,7 @@ class AdminManager {
               <th>Client Code</th>
               <th>Project Name</th>
               <th>Description</th>
+              <th>Billable</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -160,6 +161,7 @@ class AdminManager {
                 <td><strong>${project.clientCode}</strong></td>
                 <td>${project.name}</td>
                 <td>${project.description}</td>
+                <td>${project.billable ? '✓ Yes' : '✗ No'}</td>
                 <td>
                   <div class="table-actions">
                     <button class="btn btn-sm btn-secondary" onclick="adminManager.editProject('${project.id}')">Edit</button>
