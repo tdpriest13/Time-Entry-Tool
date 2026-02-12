@@ -30,15 +30,15 @@ class AdminManager {
         id: item.id,
         name: item.fields.Title,
         code: item.fields.ClientCode,
-        description: item.fields.ClientDescription,
-        billable: item.fields.Billable || false
+        description: item.fields.ClientDescription
       }));
 
       this.projects = projects.map(item => ({
         id: item.id,
         name: item.fields.Title,
         description: item.fields.ProjectDescription,
-        clientCode: item.fields.ClientCode
+        clientCode: item.fields.ClientCode,
+        billable: item.fields.Billable || false
       }));
 
       this.userAccess = userAccess.map(item => ({
