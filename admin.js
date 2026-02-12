@@ -187,6 +187,7 @@ class AdminManager {
               <th>User Email</th>
               <th>Client Code</th>
               <th>Client Name</th>
+              <th>Team</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -200,6 +201,7 @@ class AdminManager {
                   <td>${access.userEmail}</td>
                   <td><strong>${access.clientCode}</strong></td>
                   <td>${client ? client.name : 'Unknown'}</td>
+                  <td>${access.team || 'Onshore'}</td>
                   <td>
                     <button class="btn btn-sm btn-danger" onclick="adminManager.deleteUserAccess('${access.id}')">Remove</button>
                   </td>
