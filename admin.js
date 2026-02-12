@@ -359,7 +359,8 @@ class AdminManager {
       const projectData = {
         ClientCode: clientCode,
         Title: name,
-        ProjectDescription: description
+        ProjectDescription: description,
+        Billable: document.getElementById('projectBillable').checked
       };
 
       if (projectId) {
