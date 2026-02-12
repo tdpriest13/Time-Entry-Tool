@@ -31,6 +31,7 @@ class AdminManager {
         name: item.fields.Title,
         code: item.fields.ClientCode,
         description: item.fields.ClientDescription
+        billable: item.fields.Billable || false
       }));
 
       this.projects = projects.map(item => ({
