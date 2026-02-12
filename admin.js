@@ -322,6 +322,12 @@ class AdminManager {
             <label class="form-label required">Description</label>
             <textarea id="projectDescription" class="form-input" required rows="3">${project ? stripHtml(project.description) : ''}</textarea>
           </div>
+          <div class="form-group">
+  <label class="form-label">
+    <input type="checkbox" id="projectBillable" ${project?.billable ? 'checked' : ''} style="margin-right: 8px;">
+    Billable Project
+  </label>
+</div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">Save</button>
             <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
