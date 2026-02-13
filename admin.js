@@ -454,7 +454,8 @@ class AdminManager {
     try {
       await sharePointAPI.createItem(CONFIG.SHAREPOINT.lists.userClientAccess, {
         Title: email,
-        ClientCode: clientCode
+        ClientCode: clientCode,
+        Team: document.getElementById('userTeam').value
       });
 
       UI.showSuccess('User assigned successfully!');
