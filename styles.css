@@ -158,6 +158,12 @@ body {
   min-height: 0;
 }
 
+#timeEntryView,
+#adminView {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 /* Cards & Sections */
 .card {
   background: white;
