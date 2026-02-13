@@ -403,6 +403,13 @@ class AdminManager {
               `).join('')}
             </select>
           </div>
+          <div class="form-group">
+  <label class="form-label required">Team</label>
+  <select id="userTeam" class="form-select" required>
+    <option value="Onshore">Onshore</option>
+    <option value="Offshore">Offshore</option>
+  </select>
+</div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">Assign</button>
             <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
