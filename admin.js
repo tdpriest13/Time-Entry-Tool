@@ -502,6 +502,7 @@ class AdminManager {
     this.renderClientTable();
     this.renderProjectTable();
     this.renderUserAccessTable();
+    this.renderAdminDashboard();
   } catch (err) {
     console.error('Error deleting client:', err);
     UI.showError('Failed to delete client. Please try again.');
@@ -537,6 +538,7 @@ class AdminManager {
     this.renderClientTable();
     this.renderProjectTable();
     this.renderUserAccessTable();
+    this.renderAdminDashboard();
   } catch (err) {
     console.error('Error deleting client:', err);
     UI.showError('Failed to delete client. Please try again.');
@@ -551,6 +553,7 @@ class AdminManager {
       UI.showSuccess('Project deleted successfully!');
       await this.loadAllData();
       this.renderProjectTable();
+      this.renderAdminDashboard();
     } catch (err) {
       console.error('Error deleting project:', err);
       UI.showError('Failed to delete project. Please try again.');
@@ -565,6 +568,7 @@ class AdminManager {
       UI.showSuccess('User assignment removed!');
       await this.loadAllData();
       this.renderUserAccessTable();
+      this.renderAdminDashboard();
     } catch (err) {
       console.error('Error deleting user access:', err);
       UI.showError('Failed to remove assignment. Please try again.');
