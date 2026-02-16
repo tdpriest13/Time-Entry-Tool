@@ -440,6 +440,6 @@ class TimeEntryManager {
     this.validateHoursInput(e.target);
   });
 }
-  
+}
 // Global instance
 const timeEntryManager = new TimeEntryManager();
