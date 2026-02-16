@@ -360,10 +360,86 @@ class TimeEntryManager {
   }
 
   editEntry(entryId) {
-    // TODO: Implement edit functionality
-    UI.showError('Edit functionality coming soon!');
-  }
-}
+  const entry = this.timeEntries.find(e => e.id === entryId);
+  if (!entry) return;
 
+  const formHtml = `
+    <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 600px; box-shadow: var(--shadow-lg);">
+      <div class="card-header">
+        <h3 class="card-title">Edit Time Entry</h3>
+      </div>
+      <form id="editEntryForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label required">Client</label>
+            <select id="editClientSelect" class="form-select" required>
+              ${this.userClients.map(c => `
+                <option value="${c.code}" ${entry.clientCode === c.code ? 'selected' : ''}>
+                  ${c.code} - ${c.name}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label required">Project</label>
+            <select id="editProjectSelect" class="form-select" required>
+              ${this.getProjectsForClient(entry.clientCode).map(p => `
+                <option value="${p.name}" ${entry.projectName === p.name ? 'selected' : ''}>
+                  ${p.name}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label required">Date</label>
+            <input type="date" id="editDateInput" class="form-input" required value="${entry.date}" />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label required">Hours</label>
+            <input type="number" id="editHoursInput" class="form-input" required step="0.25" min="0.25" max="24" value="${entry.hours}" />
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required">Task/Activity</label>
+          <input type="text" id="editTaskInput" class="form-input" required value="${entry.taskActivity}" />
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="editNotesInput" class="form-input" rows="3">${entry.notes}</textarea>
+        </div>
+        
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-secondary" onclick="timeEntryManager.closeEditForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="timeEntryManager.closeEditForm()"></div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', formHtml);
+
+  // Event listeners
+  document.getElementById('editClientSelect').addEventListener('change', (e) => {
+    this.onEditClientChange(e.target.value);
+  });
+
+  document.getElementById('editEntryForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await this.saveEditedEntry(entryId);
+  });
+
+  document.getElementById('editHoursInput').addEventListener('input', (e) => {
+    this.validateHoursInput(e.target);
+  });
+}
+  
 // Global instance
 const timeEntryManager = new TimeEntryManager();
