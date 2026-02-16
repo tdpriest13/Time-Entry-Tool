@@ -440,6 +440,69 @@ class TimeEntryManager {
     this.validateHoursInput(e.target);
   });
 }
+  onEditClientChange(clientCode) {
+  const projectSelect = document.getElementById('editProjectSelect');
+  const clientProjects = this.getProjectsForClient(clientCode);
+  
+  if (clientProjects.length === 0) {
+    projectSelect.innerHTML = '<option value="">No projects available</option>';
+    projectSelect.disabled = true;
+  } else {
+    projectSelect.innerHTML = `
+      <option value="">Select a project</option>
+      ${clientProjects.map(p => `
+        <option value="${p.name}">${p.name}</option>
+      `).join('')}
+    `;
+    projectSelect.disabled = false;
+  }
+}
+
+async saveEditedEntry(entryId) {
+  const clientCode = document.getElementById('editClientSelect').value;
+  const projectName = document.getElementById('editProjectSelect').value;
+  const date = document.getElementById('editDateInput').value;
+  const taskActivity = document.getElementById('editTaskInput').value;
+  const hours = document.getElementById('editHoursInput').value;
+  const notes = document.getElementById('editNotesInput').value;
+
+  // Validation
+  if (!Validation.validateRequired(clientCode) || !Validation.validateRequired(projectName) ||
+      !Validation.validateRequired(date) || !Validation.validateRequired(taskActivity) ||
+      !Validation.validateHours(hours)) {
+    UI.showError('Please fill all required fields correctly');
+    return;
+  }
+
+  try {
+    const updatedEntry = {
+      Title: authManager.getUserEmail(),
+      Date: date,
+      ClientCode: clientCode,
+      ProjectName: projectName,
+      TaskActivity: taskActivity,
+      Hours: parseFloat(hours),
+      Notes: notes
+    };
+
+    await sharePointAPI.updateItem(CONFIG.SHAREPOINT.lists.timeEntries, entryId, updatedEntry);
+    
+    UI.showSuccess('Time entry updated successfully!');
+    this.closeEditForm();
+    await this.loadTimeEntries();
+    this.renderTimeEntries();
+  } catch (err) {
+    console.error('Error updating entry:', err);
+    UI.showError('Failed to update time entry. Please try again.');
+  }
+}
+
+closeEditForm() {
+  const overlay = document.querySelector('[style*="position: fixed"][style*="z-index: 999"]');
+  const form = document.querySelector('[style*="position: fixed"][style*="z-index: 1000"]');
+  if (overlay) overlay.remove();
+  if (form) form.remove();
+}
 }
 // Global instance
 const timeEntryManager = new TimeEntryManager();
