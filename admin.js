@@ -5,6 +5,7 @@ class AdminManager {
     this.clients = [];
     this.projects = [];
     this.userAccess = [];
+    this.activities = [];
     this.allUsers = [];
   }
 
@@ -23,7 +24,8 @@ class AdminManager {
       const [clients, projects, userAccess] = await Promise.all([
         sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.clients),
         sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.projects),
-        sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.userClientAccess)
+        sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.userClientAccess),
+        sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.activities)
       ]);
 
       this.clients = clients.map(item => ({
@@ -48,6 +50,13 @@ class AdminManager {
         team: item.fields.Team || 'Onshore'
       }));
 
+      this.activities = activities.map(item => ({
+  id: item.id,
+  name: item.fields.Title,
+  description: item.fields.ActivityDescription,
+  projectName: item.fields.ProjectName
+}));
+      
       console.log('Admin data loaded');
     } catch (err) {
       console.error('Error loading admin data:', err);
