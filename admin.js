@@ -483,6 +483,58 @@ class AdminManager {
     });
   }
 
+  showActivityForm(activityId = null) {
+  const activity = activityId ? this.activities.find(a => a.id === activityId) : null;
+  const isEdit = !!activity;
+
+  const stripHtml = (html) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
+  const formHtml = `
+    <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 500px; box-shadow: var(--shadow-lg);">
+      <div class="card-header">
+        <h3 class="card-title">${isEdit ? 'Edit Activity' : 'Add New Activity'}</h3>
+      </div>
+      <form id="activityForm">
+        <div class="form-group">
+          <label class="form-label required">Project</label>
+          <select id="activityProjectName" class="form-select" required>
+            <option value="">Select a project</option>
+            ${this.projects.map(p => `
+              <option value="${p.name}" ${activity?.projectName === p.name ? 'selected' : ''}>
+                ${p.clientCode} - ${p.name}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Activity Name</label>
+          <input type="text" id="activityName" class="form-input" required value="${activity?.name || ''}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Description</label>
+          <textarea id="activityDescription" class="form-input" required rows="3">${activity ? stripHtml(activity.description) : ''}</textarea>
+        </div>
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="adminManager.closeForm()"></div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', formHtml);
+
+  document.getElementById('activityForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await this.saveActivity(activityId);
+  });
+}
+
   async saveUserAccess() {
     const email = document.getElementById('assignUserEmail').value.trim().toLowerCase();
     const clientCode = document.getElementById('accessClientCode').value;
