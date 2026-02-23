@@ -13,7 +13,8 @@ const CONFIG = {
       timeEntries: 'TimeEntries',
       clients: 'Clients',
       projects: 'Projects',
-      userClientAccess: 'UserClientAccess'
+      userClientAccess: 'UserClientAccess',
+      activities: 'Activities'
     }
   },
   
