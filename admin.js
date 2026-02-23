@@ -535,6 +535,60 @@ class AdminManager {
   });
 }
 
+  async saveActivity(activityId = null) {
+  const projectName = document.getElementById('activityProjectName').value;
+  const name = document.getElementById('activityName').value.trim();
+  const description = document.getElementById('activityDescription').value.trim();
+
+  if (!projectName || !name || !description) {
+    UI.showError('All fields are required');
+    return;
+  }
+
+  try {
+    const activityData = {
+      ProjectName: projectName,
+      Title: name,
+      ActivityDescription: description
+    };
+
+    if (activityId) {
+      await sharePointAPI.updateItem(CONFIG.SHAREPOINT.lists.activities, activityId, activityData);
+      UI.showSuccess('Activity updated successfully!');
+    } else {
+      await sharePointAPI.createItem(CONFIG.SHAREPOINT.lists.activities, activityData);
+      UI.showSuccess('Activity created successfully!');
+    }
+
+    this.closeForm();
+    await this.loadAllData();
+    this.renderActivityTable();
+    this.renderAdminDashboard();
+  } catch (err) {
+    console.error('Error saving activity:', err);
+    UI.showError('Failed to save activity. Please try again.');
+  }
+}
+
+editActivity(activityId) {
+  this.showActivityForm(activityId);
+}
+
+async deleteActivity(activityId) {
+  if (!confirm('Are you sure? This will not delete associated time entries.')) return;
+
+  try {
+    await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.activities, activityId);
+    UI.showSuccess('Activity deleted successfully!');
+    await this.loadAllData();
+    this.renderActivityTable();
+    this.renderAdminDashboard();
+  } catch (err) {
+    console.error('Error deleting activity:', err);
+    UI.showError('Failed to delete activity. Please try again.');
+  }
+}
+
   async saveUserAccess() {
     const email = document.getElementById('assignUserEmail').value.trim().toLowerCase();
     const clientCode = document.getElementById('accessClientCode').value;
