@@ -234,6 +234,41 @@ class AdminManager {
     document.getElementById('userAccessManagement').innerHTML = html;
   }
 
+  renderActivityTable() {
+  const html = `
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Project Name</th>
+            <th>Activity Name</th>
+            <th>Description</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${this.activities.length === 0 ? `
+            <tr><td colspan="4" class="text-center">No activities yet. Add your first activity above.</td></tr>
+          ` : this.activities.map(activity => `
+            <tr>
+              <td><strong>${activity.projectName}</strong></td>
+              <td>${activity.name}</td>
+              <td>${activity.description}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn btn-sm btn-secondary" onclick="adminManager.editActivity('${activity.id}')">Edit</button>
+                  <button class="btn btn-sm btn-danger" onclick="adminManager.deleteActivity('${activity.id}')">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('activityManagement').innerHTML = html;
+}
+
   showClientForm(clientId = null) {
     const client = clientId ? this.clients.find(c => c.id === clientId) : null;
     const isEdit = !!client;
