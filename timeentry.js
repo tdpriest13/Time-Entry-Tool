@@ -568,7 +568,7 @@ async saveEditedEntry(entryId) {
   const clientCode = document.getElementById('editClientSelect').value;
   const projectName = document.getElementById('editProjectSelect').value;
   const date = document.getElementById('editDateInput').value;
-  const taskActivity = document.getElementById('editActivitySelect').value;
+  const activityTask = document.getElementById('editActivitySelect').value;
   const hours = document.getElementById('editHoursInput').value;
   const notes = document.getElementById('editNotesInput').value;
 
