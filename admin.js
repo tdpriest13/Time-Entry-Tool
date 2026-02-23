@@ -21,7 +21,7 @@ class AdminManager {
 
   async loadAllData() {
     try {
-      const [clients, projects, userAccess] = await Promise.all([
+      const [clients, projects, userAccess, activites] = await Promise.all([
         sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.clients),
         sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.projects),
         sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.userClientAccess),
