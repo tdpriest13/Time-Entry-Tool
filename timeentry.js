@@ -477,7 +477,7 @@ const html = `
         <div class="form-row">
           <div class="form-group">
             <label class="form-label required">Date</label>
-            <input type="date" id="editDateInput" class="form-input" required value="${entry.date}" />
+            <input type="date" id="editDateInput" class="form-input" required value="${entry.date.split('T')[0]}" />
           </div>
           
           <div class="form-group">
@@ -499,7 +499,7 @@ const html = `
         
         <div class="form-group">
           <label class="form-label">Notes</label>
-          <textarea id="editNotesInput" class="form-input" rows="3">${entry.notes}</textarea>
+          <textarea id="editNotesInput" class="form-input" rows="3">${entry.notes.replace(/<[^>]*>/g, '')}</textarea>
         </div>
         
         <div class="btn-group">
@@ -589,7 +589,7 @@ if (!Validation.validateRequired(clientCode) || !Validation.validateRequired(pro
       Date: date,
       ClientCode: clientCode,
       ProjectName: projectName,
-      TaskActivity: activityTask,
+      ActivityTask: activityTask,
       Hours: parseFloat(hours),
       Notes: notes
     };
