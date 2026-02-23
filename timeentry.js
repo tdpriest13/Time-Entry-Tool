@@ -504,6 +504,29 @@ closeEditForm() {
   if (overlay) overlay.remove();
   if (form) form.remove();
 }
+
+  copyEntry(entryId) {
+  const entry = this.timeEntries.find(e => e.id === entryId);
+  if (!entry) return;
+
+  // Pre-fill the main form
+  document.getElementById('clientSelect').value = entry.clientCode;
+  this.onClientChange(entry.clientCode);
+  
+  // Wait for projects to load, then set project
+  setTimeout(() => {
+    document.getElementById('projectSelect').value = entry.projectName;
+    document.getElementById('dateInput').value = DateUtils.getTodayISO(); // Default to today
+    document.getElementById('taskInput').value = entry.taskActivity;
+    document.getElementById('hoursInput').value = entry.hours;
+    document.getElementById('notesInput').value = entry.notes;
+    
+    // Scroll to top of page so user sees the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+
+  UI.showSuccess('Entry copied! Update the date and save.');
+}
 }
 // Global instance
 const timeEntryManager = new TimeEntryManager();
