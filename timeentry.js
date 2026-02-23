@@ -255,7 +255,7 @@ class TimeEntryManager {
     const clientCode = document.getElementById('clientSelect').value;
     const projectName = document.getElementById('projectSelect').value;
     const date = document.getElementById('dateInput').value;
-    const taskActivity = document.getElementById('activitySelect').value;
+    const activityTask = document.getElementById('activitySelect').value;
     const hours = document.getElementById('hoursInput').value;
     const notes = document.getElementById('notesInput').value;
 
@@ -287,7 +287,7 @@ class TimeEntryManager {
         Date: date,
         ClientCode: clientCode,
         ProjectName: projectName,
-        TaskActivity: activityTask,
+        ActivityTask: activityTask,
         Hours: parseFloat(hours),
         Notes: notes
       };
