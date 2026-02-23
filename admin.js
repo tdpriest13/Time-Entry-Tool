@@ -107,12 +107,22 @@ class AdminManager {
         </div>
         <div id="userAccessManagement"></div>
       </div>
+
+      <!-- Activity/Task Management -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Activity/Task Management</h3>
+    <button class="btn btn-primary" onclick="adminManager.showActivityForm()">+ Add Activity</button>
+  </div>
+  <div id="activityManagement"></div>
+</div>
     `;
 
     document.getElementById('adminContent').innerHTML = html;
     this.renderClientTable();
     this.renderProjectTable();
     this.renderUserAccessTable();
+    this.renderActivityTable();
   }
 
   renderClientTable() {
