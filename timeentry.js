@@ -165,8 +165,7 @@ class TimeEntryManager {
               <input type="number" id="hoursInput" class="form-input" required step="0.25" min="0.25" max="24" placeholder="0.25" />
               <small style="color: var(--gray-600); font-size: 12px;">Enter in 0.25 hour increments</small>
             </div>
-          </div>
-          
+                 
           <div class="form-group">
             <label class="form-label">Notes</label>
             <textarea id="notesInput" class="form-input" rows="3" placeholder="Optional details about this time entry"></textarea>
