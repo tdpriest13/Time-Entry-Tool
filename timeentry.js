@@ -632,10 +632,6 @@ setTimeout(() => {
   }, 100);
 }, 100);
     
-    // Scroll to top of page so user sees the form
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, 100);
-
   UI.showSuccess('Entry copied! Update the date and save.');
 }
 }
