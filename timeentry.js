@@ -4,6 +4,7 @@ class TimeEntryManager {
   constructor() {
     this.userClients = [];
     this.projects = [];
+    this.activities = [];
     this.timeEntries = [];
     this.currentClient = null;
   }
@@ -12,6 +13,7 @@ class TimeEntryManager {
     try {
       await this.loadUserClients();
       await this.loadProjects();
+      await this.loadActivities();
       await this.loadTimeEntries();
       this.renderTimeEntryForm();
       this.renderTimeEntries();
@@ -66,6 +68,23 @@ class TimeEntryManager {
     }
   }
 
+  async loadActivities() {
+  try {
+    const allActivities = await sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.activities);
+    this.activities = allActivities.map(item => ({
+      id: item.id,
+      name: item.fields.Title,
+      description: item.fields.ActivityDescription,
+      projectName: item.fields.ProjectName
+    }));
+
+    console.log('Activities loaded:', this.activities);
+  } catch (err) {
+    console.error('Error loading activities:', err);
+    this.activities = [];
+  }
+}
+
   async loadTimeEntries() {
     try {
       const userEmail = authManager.getUserEmail();
@@ -79,7 +98,7 @@ class TimeEntryManager {
           date: item.fields.Date,
           clientCode: item.fields.ClientCode,
           projectName: item.fields.ProjectName,
-          taskActivity: item.fields.TaskActivity,
+          taskActivity: item.fields.ActivityTask,
           hours: parseFloat(item.fields.Hours) || 0,
           notes: item.fields.Notes || ''
         }))
@@ -94,7 +113,12 @@ class TimeEntryManager {
 
   getProjectsForClient(clientCode) {
     return this.projects.filter(p => p.clientCode === clientCode);
+
   }
+
+  getActivitiesForProject(projectName) {
+  return this.activities.filter(a => a.projectName === projectName);
+}
 
   renderTimeEntryForm() {
     const formHtml = `
@@ -129,11 +153,12 @@ class TimeEntryManager {
             </div>
           </div>
           
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label required">Task/Activity</label>
-              <input type="text" id="taskInput" class="form-input" required placeholder="e.g., Development, Meeting, Research" />
-            </div>
+         <div class="form-group">
+  <label class="form-label required">Activity/Task</label>
+  <select id="activitySelect" class="form-select" required disabled>
+    <option value="">Select a project first</option>
+  </select>
+</div>
             
             <div class="form-group">
               <label class="form-label required">Hours</label>
@@ -166,6 +191,10 @@ class TimeEntryManager {
       this.onClientChange(e.target.value);
     });
 
+    document.getElementById('projectSelect').addEventListener('change', (e) => {
+  this.onProjectChange(e.target.value);
+});
+    
     document.getElementById('timeEntryForm').addEventListener('submit', (e) => {
       e.preventDefault();
       this.saveTimeEntry();
@@ -194,6 +223,24 @@ class TimeEntryManager {
     }
   }
 
+  onProjectChange(projectName) {
+  const activitySelect = document.getElementById('activitySelect');
+  const projectActivities = this.getActivitiesForProject(projectName);
+  
+  if (projectActivities.length === 0) {
+    activitySelect.innerHTML = '<option value="">No activities available for this project</option>';
+    activitySelect.disabled = true;
+  } else {
+    activitySelect.innerHTML = `
+      <option value="">Select an activity</option>
+      ${projectActivities.map(a => `
+        <option value="${a.name}">${a.name}</option>
+      `).join('')}
+    `;
+    activitySelect.disabled = false;
+  }
+}
+
   validateHoursInput(input) {
     const isValid = Validation.validateHours(input.value);
     if (isValid) {
@@ -208,7 +255,7 @@ class TimeEntryManager {
     const clientCode = document.getElementById('clientSelect').value;
     const projectName = document.getElementById('projectSelect').value;
     const date = document.getElementById('dateInput').value;
-    const taskActivity = document.getElementById('taskInput').value;
+    const taskActivity = document.getElementById('activitySelect').value;
     const hours = document.getElementById('hoursInput').value;
     const notes = document.getElementById('notesInput').value;
 
@@ -225,8 +272,8 @@ class TimeEntryManager {
       UI.showError('Please select a date');
       return;
     }
-    if (!Validation.validateRequired(taskActivity)) {
-      UI.showError('Please enter a task/activity');
+    if (!Validation.validateRequired(activityTask)) {
+      UI.showError('Please enter an activity/task');
       return;
     }
     if (!Validation.validateHours(hours)) {
@@ -240,7 +287,7 @@ class TimeEntryManager {
         Date: date,
         ClientCode: clientCode,
         ProjectName: projectName,
-        TaskActivity: taskActivity,
+        TaskActivity: activityTask,
         Hours: parseFloat(hours),
         Notes: notes
       };
@@ -307,7 +354,7 @@ Object.keys(entriesByDate).sort((a, b) => new Date(b) - new Date(a)).forEach(dat
         <td></td>
         <td>${entry.clientCode}</td>
         <td>${entry.projectName}</td>
-        <td>${entry.taskActivity}</td>
+        <td>${entry.activityTask}</td>
         <td><strong>${entry.hours.toFixed(2)}</strong></td>
         <td>${entry.notes || '-'}</td>
         <td>
@@ -437,9 +484,15 @@ const html = `
         </div>
         
         <div class="form-group">
-          <label class="form-label required">Task/Activity</label>
-          <input type="text" id="editTaskInput" class="form-input" required value="${entry.taskActivity}" />
-        </div>
+  <label class="form-label required">Activity/Task</label>
+  <select id="editActivitySelect" class="form-select" required>
+    ${this.getActivitiesForProject(entry.projectName).map(a => `
+      <option value="${a.name}" ${entry.activityTask === a.name ? 'selected' : ''}>
+        ${a.name}
+      </option>
+    `).join('')}
+  </select>
+</div>
         
         <div class="form-group">
           <label class="form-label">Notes</label>
@@ -462,6 +515,10 @@ const html = `
     this.onEditClientChange(e.target.value);
   });
 
+    document.getElementById('editProjectSelect').addEventListener('change', (e) => {
+  this.onEditProjectChange(e.target.value);
+});
+    
   document.getElementById('editEntryForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     await this.saveEditedEntry(entryId);
@@ -489,18 +546,36 @@ const html = `
   }
 }
 
+  onEditProjectChange(projectName) {
+  const activitySelect = document.getElementById('editActivitySelect');
+  const projectActivities = this.getActivitiesForProject(projectName);
+  
+  if (projectActivities.length === 0) {
+    activitySelect.innerHTML = '<option value="">No activities available</option>';
+    activitySelect.disabled = true;
+  } else {
+    activitySelect.innerHTML = `
+      <option value="">Select an activity</option>
+      ${projectActivities.map(a => `
+        <option value="${a.name}">${a.name}</option>
+      `).join('')}
+    `;
+    activitySelect.disabled = false;
+  }
+}
+  
 async saveEditedEntry(entryId) {
   const clientCode = document.getElementById('editClientSelect').value;
   const projectName = document.getElementById('editProjectSelect').value;
   const date = document.getElementById('editDateInput').value;
-  const taskActivity = document.getElementById('editTaskInput').value;
+  const taskActivity = document.getElementById('editActivitySelect').value;
   const hours = document.getElementById('editHoursInput').value;
   const notes = document.getElementById('editNotesInput').value;
 
   // Validation
-  if (!Validation.validateRequired(clientCode) || !Validation.validateRequired(projectName) ||
-      !Validation.validateRequired(date) || !Validation.validateRequired(taskActivity) ||
-      !Validation.validateHours(hours)) {
+if (!Validation.validateRequired(clientCode) || !Validation.validateRequired(projectName) ||
+    !Validation.validateRequired(date) || !Validation.validateRequired(activityTask) ||
+    !Validation.validateHours(hours)) {
     UI.showError('Please fill all required fields correctly');
     return;
   }
@@ -511,7 +586,7 @@ async saveEditedEntry(entryId) {
       Date: date,
       ClientCode: clientCode,
       ProjectName: projectName,
-      TaskActivity: taskActivity,
+      TaskActivity: activityTask,
       Hours: parseFloat(hours),
       Notes: notes
     };
@@ -543,13 +618,19 @@ closeEditForm() {
   document.getElementById('clientSelect').value = entry.clientCode;
   this.onClientChange(entry.clientCode);
   
-  // Wait for projects to load, then set project
+  // Wait for activities to load after project selection
+setTimeout(() => {
+  document.getElementById('projectSelect').value = entry.projectName;
+  this.onProjectChange(entry.projectName);
+  
   setTimeout(() => {
-    document.getElementById('projectSelect').value = entry.projectName;
-    document.getElementById('dateInput').value = DateUtils.getTodayISO(); // Default to today
-    document.getElementById('taskInput').value = entry.taskActivity;
+    document.getElementById('activitySelect').value = entry.activityTask;
+    document.getElementById('dateInput').value = DateUtils.getTodayISO();
     document.getElementById('hoursInput').value = entry.hours;
     document.getElementById('notesInput').value = entry.notes;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+}, 100);
     
     // Scroll to top of page so user sees the form
     window.scrollTo({ top: 0, behavior: 'smooth' });
