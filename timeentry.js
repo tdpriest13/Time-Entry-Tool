@@ -318,6 +318,7 @@ class TimeEntryManager {
                   <td>${entry.notes || '-'}</td>
                   <td>
                     <div class="table-actions">
+                      <button class="btn btn-sm btn-primary" onclick="timeEntryManager.copyEntry('${entry.id}')">Copy</button>
                       <button class="btn btn-sm btn-secondary" onclick="timeEntryManager.editEntry('${entry.id}')">Edit</button>
                       <button class="btn btn-sm btn-danger" onclick="timeEntryManager.deleteEntry('${entry.id}')">Delete</button>
                     </div>
