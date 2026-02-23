@@ -276,60 +276,90 @@ class TimeEntryManager {
     const thisWeekEntries = this.getThisWeekEntries();
     const weekTotal = thisWeekEntries.reduce((sum, entry) => sum + entry.hours, 0);
 
-    const html = `
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">My Time Entries</h3>
-          <p class="card-subtitle">View and manage your logged hours</p>
-        </div>
-        
-        <div class="week-summary">
-          <div class="week-summary-item">
-            <div class="week-summary-label">This Week</div>
-            <div class="week-summary-value">${weekTotal.toFixed(2)} hrs</div>
+    // Group entries by date
+const entriesByDate = {};
+this.timeEntries.forEach(entry => {
+  const dateKey = entry.date;
+  if (!entriesByDate[dateKey]) {
+    entriesByDate[dateKey] = [];
+  }
+  entriesByDate[dateKey].push(entry);
+});
+
+// Build HTML with date groupings
+let tableRows = '';
+Object.keys(entriesByDate).sort((a, b) => new Date(b) - new Date(a)).forEach(date => {
+  const dayEntries = entriesByDate[date];
+  const dayTotal = dayEntries.reduce((sum, e) => sum + e.hours, 0);
+  
+  // Date header row
+  tableRows += `
+    <tr style="background: var(--gray-100);">
+      <td colspan="6"><strong>${DateUtils.formatDate(date)} - ${dayTotal.toFixed(2)} hours</strong></td>
+      <td></td>
+    </tr>
+  `;
+  
+  // Entries for this date
+  dayEntries.forEach(entry => {
+    tableRows += `
+      <tr>
+        <td></td>
+        <td>${entry.clientCode}</td>
+        <td>${entry.projectName}</td>
+        <td>${entry.taskActivity}</td>
+        <td><strong>${entry.hours.toFixed(2)}</strong></td>
+        <td>${entry.notes || '-'}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-sm btn-primary" onclick="timeEntryManager.copyEntry('${entry.id}')">Copy</button>
+            <button class="btn btn-sm btn-secondary" onclick="timeEntryManager.editEntry('${entry.id}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="timeEntryManager.deleteEntry('${entry.id}')">Delete</button>
           </div>
-          <div class="week-summary-item">
-            <div class="week-summary-label">Total Entries</div>
-            <div class="week-summary-value">${this.timeEntries.length}</div>
-          </div>
-        </div>
-        
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Client</th>
-                <th>Project</th>
-                <th>Task/Activity</th>
-                <th>Hours</th>
-                <th>Notes</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${this.timeEntries.map(entry => `
-                <tr>
-                  <td>${DateUtils.formatDate(entry.date)}</td>
-                  <td>${entry.clientCode}</td>
-                  <td>${entry.projectName}</td>
-                  <td>${entry.taskActivity}</td>
-                  <td><strong>${entry.hours.toFixed(2)}</strong></td>
-                  <td>${entry.notes || '-'}</td>
-                  <td>
-                    <div class="table-actions">
-                      <button class="btn btn-sm btn-primary" onclick="timeEntryManager.copyEntry('${entry.id}')">Copy</button>
-                      <button class="btn btn-sm btn-secondary" onclick="timeEntryManager.editEntry('${entry.id}')">Edit</button>
-                      <button class="btn btn-sm btn-danger" onclick="timeEntryManager.deleteEntry('${entry.id}')">Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        </td>
+      </tr>
     `;
+  });
+});
+
+const html = `
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">My Time Entries</h3>
+      <p class="card-subtitle">View and manage your logged hours</p>
+    </div>
+    
+    <div class="week-summary">
+      <div class="week-summary-item">
+        <div class="week-summary-label">This Week</div>
+        <div class="week-summary-value">${weekTotal.toFixed(2)} hrs</div>
+      </div>
+      <div class="week-summary-item">
+        <div class="week-summary-label">Total Entries</div>
+        <div class="week-summary-value">${this.timeEntries.length}</div>
+      </div>
+    </div>
+    
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Client</th>
+            <th>Project</th>
+            <th>Task/Activity</th>
+            <th>Hours</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </div>
+  </div>
+`;
 
     container.innerHTML = html;
   }
