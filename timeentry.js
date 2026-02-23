@@ -252,15 +252,19 @@ class TimeEntryManager {
   }
 
   async saveTimeEntry() {
+     console.log('saveTimeEntry called');
     const clientCode = document.getElementById('clientSelect').value;
     const projectName = document.getElementById('projectSelect').value;
     const date = document.getElementById('dateInput').value;
     const activityTask = document.getElementById('activitySelect').value;
     const hours = document.getElementById('hoursInput').value;
     const notes = document.getElementById('notesInput').value;
-
+    
+ console.log('Values:', {clientCode, projectName, date, activityTask, hours});
+    
     // Validation
     if (!Validation.validateRequired(clientCode)) {
+      console.log('Client validation failed');
       UI.showError('Please select a client');
       return;
     }
