@@ -98,7 +98,7 @@ class TimeEntryManager {
           date: item.fields.Date,
           clientCode: item.fields.ClientCode,
           projectName: item.fields.ProjectName,
-          taskActivity: item.fields.ActivityTask,
+          activityTask: item.fields.ActivityTask,
           hours: parseFloat(item.fields.Hours) || 0,
           notes: item.fields.Notes || ''
         }))
