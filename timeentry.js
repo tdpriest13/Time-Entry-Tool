@@ -75,7 +75,8 @@ class TimeEntryManager {
       id: item.id,
       name: item.fields.Title,
       description: item.fields.ActivityDescription,
-      projectName: item.fields.ProjectName
+      projectName: item.fields.ProjectName,
+      billable: item.fields.Billable || false
     }));
 
     console.log('Activities loaded:', this.activities);
