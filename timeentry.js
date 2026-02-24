@@ -631,7 +631,7 @@ setTimeout(() => {
     document.getElementById('activitySelect').value = entry.activityTask;
     document.getElementById('dateInput').value = DateUtils.getTodayISO();
     document.getElementById('hoursInput').value = entry.hours;
-    document.getElementById('notesInput').value = entry.notes;
+    document.getElementById('notesInput').value = entry.notes.replace(/<[^>]*>/g, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, 100);
 }, 100);
