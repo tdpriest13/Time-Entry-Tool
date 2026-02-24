@@ -39,8 +39,7 @@ class AdminManager {
         id: item.id,
         name: item.fields.Title,
         description: item.fields.ProjectDescription,
-        clientCode: item.fields.ClientCode,
-        billable: item.fields.Billable || false
+        clientCode: item.fields.ClientCode
       }));
 
       this.userAccess = userAccess.map(item => ({
@@ -51,10 +50,10 @@ class AdminManager {
       }));
 
       this.activities = activities.map(item => ({
-  id: item.id,
-  name: item.fields.Title,
-  description: item.fields.ActivityDescription,
-  projectName: item.fields.ProjectName,
+      id: item.id,
+      name: item.fields.Title,
+      description: item.fields.ActivityDescription,
+      projectName: item.fields.ProjectName,
   billable: item.fields.Billable || false
 }));
       
@@ -673,44 +672,7 @@ async deleteActivity(activityId) {
     console.error('Error deleting client:', err);
     UI.showError('Failed to delete client. Please try again.');
   }
-}async deleteClient(clientId) {
-  const client = this.clients.find(c => c.id === clientId);
-  const relatedProjects = this.projects.filter(p => p.clientCode === client.code);
-  const relatedAccess = this.userAccess.filter(a => a.clientCode === client.code);
-  
-  let message = `Delete client "${client.code}"?`;
-  if (relatedProjects.length > 0 || relatedAccess.length > 0) {
-    message += `\n\nThis will also delete:\n- ${relatedProjects.length} project(s)\n- ${relatedAccess.length} user assignment(s)\n\nTime entries will be preserved.`;
-  }
-  
-  if (!confirm(message)) return;
-
-  try {
-    // Delete related projects
-    for (const project of relatedProjects) {
-      await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.projects, project.id);
-    }
-    
-    // Delete related user access
-    for (const access of relatedAccess) {
-      await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.userClientAccess, access.id);
-    }
-    
-    // Delete client
-    await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.clients, clientId);
-    
-    UI.showSuccess('Client and related records deleted successfully!');
-    await this.loadAllData();
-    this.renderClientTable();
-    this.renderProjectTable();
-    this.renderUserAccessTable();
-    this.renderAdminDashboard();
-  } catch (err) {
-    console.error('Error deleting client:', err);
-    UI.showError('Failed to delete client. Please try again.');
-  }
 }
-
   async deleteProject(projectId) {
     if (!confirm('Are you sure? This will not delete associated time entries.')) return;
 
