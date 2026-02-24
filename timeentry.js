@@ -618,6 +618,14 @@ closeEditForm() {
   const entry = this.timeEntries.find(e => e.id === entryId);
   if (!entry) return;
 
+    // Helper to strip HTML and decode entities
+  const cleanHtml = (html) => {
+    if (!html) return '';  // Add this line
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
   // Pre-fill the main form
   document.getElementById('clientSelect').value = entry.clientCode;
   this.onClientChange(entry.clientCode);
