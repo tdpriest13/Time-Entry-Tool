@@ -170,7 +170,6 @@ class AdminManager {
               <th>Client Code</th>
               <th>Project Name</th>
               <th>Description</th>
-              <th>Billable</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -182,7 +181,6 @@ class AdminManager {
                 <td><strong>${project.clientCode}</strong></td>
                 <td>${project.name}</td>
                 <td>${project.description}</td>
-                <td>${project.billable ? '✓ Yes' : '✗ No'}</td>
                 <td>
                   <div class="table-actions">
                     <button class="btn btn-sm btn-secondary" onclick="adminManager.editProject('${project.id}')">Edit</button>
@@ -363,6 +361,7 @@ class AdminManager {
         <div class="card-header">
           <h3 class="card-title">${isEdit ? 'Edit Project' : 'Add New Project'}</h3>
         </div>
+        
         <form id="projectForm">
           <div class="form-group">
             <label class="form-label required">Client</label>
@@ -375,26 +374,24 @@ class AdminManager {
               `).join('')}
             </select>
           </div>
+          
           <div class="form-group">
             <label class="form-label required">Project Name</label>
             <input type="text" id="projectName" class="form-input" required value="${project?.name || ''}" />
           </div>
+          
           <div class="form-group">
             <label class="form-label required">Description</label>
             <textarea id="projectDescription" class="form-input" required rows="3">${project ? stripHtml(project.description) : ''}</textarea>
           </div>
-          <div class="form-group">
-  <label class="form-label">
-    <input type="checkbox" id="projectBillable" ${project?.billable ? 'checked' : ''} style="margin-right: 8px;">
-    Billable Project
-  </label>
-</div>
+         
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">Save</button>
             <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
           </div>
         </form>
       </div>
+      
       <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="adminManager.closeForm()"></div>
     `;
 
@@ -420,8 +417,7 @@ class AdminManager {
       const projectData = {
         ClientCode: clientCode,
         Title: name,
-        ProjectDescription: description,
-        Billable: document.getElementById('projectBillable').checked
+        ProjectDescription: description
       };
 
       if (projectId) {
