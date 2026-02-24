@@ -54,7 +54,8 @@ class AdminManager {
   id: item.id,
   name: item.fields.Title,
   description: item.fields.ActivityDescription,
-  projectName: item.fields.ProjectName
+  projectName: item.fields.ProjectName,
+  billable: item.fields.Billable || false
 }));
       
       console.log('Admin data loaded');
@@ -197,6 +198,43 @@ class AdminManager {
     document.getElementById('projectManagement').innerHTML = html;
   }
 
+    renderActivityTable() {
+  const html = `
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Project Name</th>
+            <th>Activity Name</th>
+            <th>Description</th>
+            <th>Billable</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${this.activities.length === 0 ? `
+            <tr><td colspan="4" class="text-center">No activities yet. Add your first activity above.</td></tr>
+          ` : this.activities.map(activity => `
+            <tr>
+              <td><strong>${activity.projectName}</strong></td>
+              <td>${activity.name}</td>
+              <td>${activity.description}</td>
+              <td>${activity.billable ? '✓ Yes' : '✗ No'}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn btn-sm btn-secondary" onclick="adminManager.editActivity('${activity.id}')">Edit</button>
+                  <button class="btn btn-sm btn-danger" onclick="adminManager.deleteActivity('${activity.id}')">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('activityManagement').innerHTML = html;
+}
+
   renderUserAccessTable() {
     const html = `
       <div class="table-container">
@@ -233,41 +271,6 @@ class AdminManager {
     `;
     document.getElementById('userAccessManagement').innerHTML = html;
   }
-
-  renderActivityTable() {
-  const html = `
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Project Name</th>
-            <th>Activity Name</th>
-            <th>Description</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${this.activities.length === 0 ? `
-            <tr><td colspan="4" class="text-center">No activities yet. Add your first activity above.</td></tr>
-          ` : this.activities.map(activity => `
-            <tr>
-              <td><strong>${activity.projectName}</strong></td>
-              <td>${activity.name}</td>
-              <td>${activity.description}</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn btn-sm btn-secondary" onclick="adminManager.editActivity('${activity.id}')">Edit</button>
-                  <button class="btn btn-sm btn-danger" onclick="adminManager.deleteActivity('${activity.id}')">Delete</button>
-                </div>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-  document.getElementById('activityManagement').innerHTML = html;
-}
 
   showClientForm(clientId = null) {
     const client = clientId ? this.clients.find(c => c.id === clientId) : null;
@@ -518,6 +521,12 @@ class AdminManager {
           <label class="form-label required">Description</label>
           <textarea id="activityDescription" class="form-input" required rows="3">${activity ? stripHtml(activity.description) : ''}</textarea>
         </div>
+        <div class="form-group">
+  <label class="form-label">
+    <input type="checkbox" id="activityBillable" ${activity?.billable ? 'checked' : ''} style="margin-right: 8px;">
+    Billable Activity
+  </label>
+</div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary">Save</button>
           <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
@@ -549,7 +558,8 @@ class AdminManager {
     const activityData = {
       ProjectName: projectName,
       Title: name,
-      ActivityDescription: description
+      ActivityDescription: description,
+      Billable: document.getElementById('activityBillable').checked
     };
 
     if (activityId) {
