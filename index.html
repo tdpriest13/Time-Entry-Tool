@@ -98,24 +98,31 @@
   <script>
     // Navigation
     function navigateTo(view) {
-      // Update nav items
-      document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-      });
-      event.target.closest('.nav-item').classList.add('active');
+  // Update nav items
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  event.target.closest('.nav-item').classList.add('active');
 
-      // Show/hide views
-      if (view === 'timeEntry') {
-        document.getElementById('timeEntryView').classList.remove('hidden');
-        document.getElementById('adminView').classList.add('hidden');
-      } else if (view === 'admin') {
-        document.getElementById('timeEntryView').classList.add('hidden');
-        document.getElementById('adminView').classList.remove('hidden');
-        if (!adminManager.clients.length) {
-          adminManager.initialize();
-        }
-      }
+  // Show/hide views
+  document.getElementById('timeEntryView').classList.add('hidden');
+  document.getElementById('metricsView').classList.add('hidden');
+  document.getElementById('adminView').classList.add('hidden');
+
+  if (view === 'timeEntry') {
+    document.getElementById('timeEntryView').classList.remove('hidden');
+  } else if (view === 'metrics') {
+    document.getElementById('metricsView').classList.remove('hidden');
+    if (!metricsManager.initialized) {
+      metricsManager.initialize();
     }
+  } else if (view === 'admin') {
+    document.getElementById('adminView').classList.remove('hidden');
+    if (!adminManager.clients.length) {
+      adminManager.initialize();
+    }
+  }
+}
 
     // Sign In Handler
     async function handleSignIn() {
