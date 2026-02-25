@@ -32,15 +32,19 @@
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-item active" onclick="navigateTo('timeEntry')">
-          <span class="nav-icon">📝</span>
-          <span>My Time</span>
-        </div>
-        <div class="nav-item hidden" id="adminNav" onclick="navigateTo('admin')">
-          <span class="nav-icon">⚙️</span>
-          <span>Admin</span>
-        </div>
-      </nav>
+  <div class="nav-item active" onclick="navigateTo('timeEntry')">
+    <span class="nav-icon">📝</span>
+    <span>My Time</span>
+  </div>
+  <div class="nav-item" onclick="navigateTo('metrics')">
+    <span class="nav-icon">📊</span>
+    <span>Metrics</span>
+  </div>
+  <div class="nav-item hidden" id="adminNav" onclick="navigateTo('admin')">
+    <span class="nav-icon">⚙️</span>
+    <span>Admin</span>
+  </div>
+</nav>
 
       <div class="sidebar-footer">
         <button class="btn btn-secondary" style="width: 100%;" onclick="handleSignOut()">
