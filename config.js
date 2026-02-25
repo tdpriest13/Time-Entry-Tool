@@ -14,7 +14,9 @@ const CONFIG = {
       clients: 'Clients',
       projects: 'Projects',
       userClientAccess: 'UserClientAccess',
-      activities: 'Activities'
+      activities: 'Activities',
+      clientUtilizationRules: 'ClientUtilizationRules',
+    holidays: 'Holidays'
     }
   },
   
