@@ -33,7 +33,7 @@ class MetricsManager {
 
       this.utilizationRules = utilizationRules.map(item => ({
         id: item.id,
-        clientCode: item.fields.ClientCodeLookupId ? item.fields.ClientCode : null,
+        clientCode: item.fields.ClientCodeLookupId || item.fields.ClientCode || null,
         targetUtilization: parseFloat(item.fields.TargetUtilizationPercent) || 80,
         countOnlyBillable: item.fields.CountOnlyBillable !== false,
         standardHoursPerWeek: parseFloat(item.fields.StandardHoursPerWeek) || 40,
