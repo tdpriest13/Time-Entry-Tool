@@ -31,15 +31,22 @@ class MetricsManager {
         sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.activities)
       ]);
 
-      this.utilizationRules = utilizationRules.map(item => ({
-        id: item.id,
-        clientCode: item.fields.ClientCodeLookupId || item.fields.ClientCode || null,
-        targetUtilization: parseFloat(item.fields.TargetUtilizationPercent) || 80,
-        countOnlyBillable: item.fields.CountOnlyBillable !== false,
-        standardHoursPerWeek: parseFloat(item.fields.StandardHoursPerWeek) || 40,
-        holidayCalendar: item.fields.HolidayCalendar || 'Both',
-        calculationMethod: item.fields.UtilizationCalculationMethod || 'Theoretical Available Hours'
-      }));
+      // Load clients first to map lookup IDs
+const allClients = await sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.clients);
+const clientsMap = {};
+allClients.forEach(client => {
+  clientsMap[client.id] = client.fields.ClientCode;
+});
+
+this.utilizationRules = utilizationRules.map(item => ({
+  id: item.id,
+  clientCode: clientsMap[item.fields.ClientCodeLookupId] || null,
+  targetUtilization: parseFloat(item.fields.TargetUtilizationPercent) || 80,
+  countOnlyBillable: item.fields.CountOnlyBillable !== false,
+  standardHoursPerWeek: parseFloat(item.fields.StandardHoursPerWeek) || 40,
+  holidayCalendar: item.fields.HolidayCalendar || 'Both',
+  calculationMethod: item.fields.UtilizationCalculationMethod || 'Theoretical Available Hours'
+}));
 
       this.holidays = holidays.map(item => ({
         id: item.id,
