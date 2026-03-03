@@ -438,48 +438,101 @@ class AdminManager {
   }
 
   showUserAccessForm() {
-    const formHtml = `
-      <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 500px; box-shadow: var(--shadow-lg);">
-        <div class="card-header">
-          <h3 class="card-title">Assign User to Client</h3>
-        </div>
-        <form id="userAccessForm">
-          <div class="form-group">
-            <label class="form-label required">User Email</label>
-            <input type="email" id="assignUserEmail" class="form-input" required placeholder="user@company.com" />
-          </div>
-          <div class="form-group">
-            <label class="form-label required">Client</label>
-            <select id="accessClientCode" class="form-select" required>
-              <option value="">Select a client</option>
-              ${this.clients.map(c => `
-                <option value="${c.code}">${c.code} - ${c.name}</option>
-              `).join('')}
-            </select>
-          </div>
-          <div class="form-group">
-  <label class="form-label required">Team</label>
-  <select id="userTeam" class="form-select" required>
-    <option value="Onshore">Onshore</option>
-    <option value="Offshore">Offshore</option>
-  </select>
-</div>
-          <div class="btn-group">
-            <button type="submit" class="btn btn-primary">Assign</button>
-            <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
-          </div>
-        </form>
+  const formHtml = `
+    <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 500px; box-shadow: var(--shadow-lg);">
+      <div class="card-header">
+        <h3 class="card-title">Assign User to Client</h3>
       </div>
-      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="adminManager.closeForm()"></div>
-    `;
+      <form id="userAccessForm">
+        <div class="form-group">
+          <label class="form-label required">User Email</label>
+          <div style="position: relative;">
+            <input type="email" id="assignUserEmail" class="form-input" required placeholder="Start typing name or email..." autocomplete="off" />
+            <div id="userSearchResults" class="user-search-results"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Client</label>
+          <select id="accessClientCode" class="form-select" required>
+            <option value="">Select a client</option>
+            ${this.clients.map(c => `
+              <option value="${c.code}">${c.code} - ${c.name}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Team</label>
+          <select id="userTeam" class="form-select" required>
+            <option value="Onshore">Onshore</option>
+            <option value="Offshore">Offshore</option>
+          </select>
+        </div>
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Assign</button>
+          <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="adminManager.closeForm()"></div>
+  `;
 
-    document.body.insertAdjacentHTML('beforeend', formHtml);
+  document.body.insertAdjacentHTML('beforeend', formHtml);
 
-    document.getElementById('userAccessForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await this.saveUserAccess();
-    });
-  }
+  // Add search functionality
+  const emailInput = document.getElementById('assignUserEmail');
+  const resultsDiv = document.getElementById('userSearchResults');
+  let searchTimeout;
+
+  emailInput.addEventListener('input', async (e) => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value;
+
+    if (query.length < 2) {
+      resultsDiv.innerHTML = '';
+      resultsDiv.style.display = 'none';
+      return;
+    }
+
+    searchTimeout = setTimeout(async () => {
+      const users = await searchUsers(query);
+      
+      if (users.length === 0) {
+        resultsDiv.innerHTML = '<div class="user-search-item">No users found</div>';
+      } else {
+        resultsDiv.innerHTML = users.map(user => `
+          <div class="user-search-item" data-email="${user.email}">
+            <div class="user-search-name">${user.name}</div>
+            <div class="user-search-email">${user.email}</div>
+          </div>
+        `).join('');
+
+        // Add click handlers
+        resultsDiv.querySelectorAll('.user-search-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const email = item.dataset.email;
+            emailInput.value = email;
+            resultsDiv.innerHTML = '';
+            resultsDiv.style.display = 'none';
+          });
+        });
+      }
+      
+      resultsDiv.style.display = 'block';
+    }, 300);
+  });
+
+  // Hide results when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!emailInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+      resultsDiv.style.display = 'none';
+    }
+  });
+
+  document.getElementById('userAccessForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await this.saveUserAccess();
+  });
+}
 
   showActivityForm(activityId = null) {
   const activity = activityId ? this.activities.find(a => a.id === activityId) : null;
