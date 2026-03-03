@@ -516,6 +516,7 @@ class AdminManager {
           });
         });
       }
+
       
       resultsDiv.style.display = 'block';
     }, 300);
