@@ -191,7 +191,11 @@ async function searchUsers(query) {
       }
     );
 
-    if (!response.ok) throw new Error('User search failed');
+    if (!response.ok) {
+  const error = await response.text();
+  console.error('User search API error:', response.status, error);
+  throw new Error('User search failed');
+}
     
     const data = await response.json();
     return data.value.map(user => ({
