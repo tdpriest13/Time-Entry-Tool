@@ -176,5 +176,33 @@ const UI = {
   }
 };
 
+// User Search via Graph API
+async function searchUsers(query) {
+  if (!query || query.length < 2) return [];
+  
+  try {
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/users?$filter=startswith(displayName,'${query}') or startswith(mail,'${query}')&$select=displayName,mail&$top=10`,
+      {
+        headers: {
+          'Authorization': `Bearer ${authManager.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) throw new Error('User search failed');
+    
+    const data = await response.json();
+    return data.value.map(user => ({
+      name: user.displayName,
+      email: user.mail || user.userPrincipalName
+    }));
+  } catch (err) {
+    console.error('Error searching users:', err);
+    return [];
+  }
+}
+
 // Global instances
 const sharePointAPI = new SharePointAPI();
