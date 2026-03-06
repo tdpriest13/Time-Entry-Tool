@@ -20,7 +20,16 @@ class MetricsManager {
       UI.showError('Failed to load metrics data. Please refresh the page.');
     }
   }
-
+  
+async refresh() {
+  try {
+    await this.loadAllData();
+    this.renderMetrics();
+  } catch (err) {
+    console.error('Failed to refresh metrics:', err);
+  }
+}
+  
   async loadAllData() {
     try {
       const [utilizationRules, holidays, userAccess, timeEntries, activities] = await Promise.all([
