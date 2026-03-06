@@ -112,7 +112,10 @@
   document.getElementById('adminView').classList.add('hidden');
 
   if (view === 'timeEntry') {
-    document.getElementById('timeEntryView').classList.remove('hidden');
+  document.getElementById('timeEntryView').classList.remove('hidden');
+  if (!timeEntryManager.initialized) {
+    timeEntryManager.initialize();
+  }
   } else if (view === 'metrics') {
     document.getElementById('metricsView').classList.remove('hidden');
     if (!metricsManager.initialized) {
