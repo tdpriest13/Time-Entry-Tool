@@ -341,6 +341,8 @@ class AdminManager {
       await this.loadAllData();
       this.renderClientTable();
       this.renderAdminDashboard();
+      if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
     } catch (err) {
       console.error('Error saving client:', err);
       UI.showError('Failed to save client. Please try again.');
@@ -431,6 +433,8 @@ class AdminManager {
       await this.loadAllData();
       this.renderProjectTable();
       this.renderAdminDashboard();
+      if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
           } catch (err) {
       console.error('Error saving project:', err);
       UI.showError('Failed to save project. Please try again.');
@@ -623,6 +627,8 @@ class AdminManager {
     await this.loadAllData();
     this.renderActivityTable();
     this.renderAdminDashboard();
+    if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
   } catch (err) {
     console.error('Error saving activity:', err);
     UI.showError('Failed to save activity. Please try again.');
@@ -642,6 +648,8 @@ async deleteActivity(activityId) {
     await this.loadAllData();
     this.renderActivityTable();
     this.renderAdminDashboard();
+    if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
   } catch (err) {
     console.error('Error deleting activity:', err);
     UI.showError('Failed to delete activity. Please try again.');
@@ -684,6 +692,8 @@ async deleteActivity(activityId) {
       await this.loadAllData();
       this.renderUserAccessTable();
       this.renderAdminDashboard();
+      if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
           } catch (err) {
       console.error('Error saving user access:', err);
       UI.showError('Failed to assign user. Please try again.');
@@ -722,11 +732,14 @@ async deleteActivity(activityId) {
     this.renderProjectTable();
     this.renderUserAccessTable();
     this.renderAdminDashboard();
+    if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
   } catch (err) {
     console.error('Error deleting client:', err);
     UI.showError('Failed to delete client. Please try again.');
   }
 }
+  
   async deleteProject(projectId) {
     if (!confirm('Are you sure? This will not delete associated time entries.')) return;
 
@@ -736,6 +749,8 @@ async deleteActivity(activityId) {
       await this.loadAllData();
       this.renderProjectTable();
       this.renderAdminDashboard();
+      if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
     } catch (err) {
       console.error('Error deleting project:', err);
       UI.showError('Failed to delete project. Please try again.');
@@ -751,6 +766,8 @@ async deleteActivity(activityId) {
       await this.loadAllData();
       this.renderUserAccessTable();
       this.renderAdminDashboard();
+      if (timeEntryManager.initialized) await timeEntryManager.refresh();
+if (metricsManager.initialized) await metricsManager.refresh();
     } catch (err) {
       console.error('Error deleting user access:', err);
       UI.showError('Failed to remove assignment. Please try again.');
