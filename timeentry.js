@@ -23,6 +23,19 @@ class TimeEntryManager {
     }
   }
 
+  async refresh() {
+  try {
+    await this.loadUserClients();
+    await this.loadProjects();
+    await this.loadActivities();
+    await this.loadTimeEntries();
+    this.renderTimeEntryForm();
+    this.renderTimeEntries();
+  } catch (err) {
+    console.error('Failed to refresh time entry:', err);
+  }
+}
+
   async loadUserClients() {
     try {
       const userEmail = authManager.getUserEmail();
