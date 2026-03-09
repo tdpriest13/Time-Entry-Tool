@@ -81,192 +81,198 @@ class AdminManager {
         </div>
       </div>
 
-      <!-- Client Management -->
-      <div class="card mt-3">
+      <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Client Management</h3>
+          <h3 class="card-title">Quick Actions</h3>
+        </div>
+        <div class="btn-group" style="padding: 20px;">
           <button class="btn btn-primary" onclick="adminManager.showClientForm()">+ Add Client</button>
-        </div>
-        <div id="clientManagement"></div>
-      </div>
-
-      <!-- Project Management -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Project Management</h3>
           <button class="btn btn-primary" onclick="adminManager.showProjectForm()">+ Add Project</button>
-        </div>
-        <div id="projectManagement"></div>
-      </div>
-
- <!-- Activity/Task Management -->
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">Activity/Task Management</h3>
-    <button class="btn btn-primary" onclick="adminManager.showActivityForm()">+ Add Activity</button>
-  </div>
-  <div id="activityManagement"></div>
-</div>
-
-      <!-- User Access Management -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">User Access Management</h3>
+          <button class="btn btn-primary" onclick="adminManager.showActivityForm()">+ Add Activity</button>
           <button class="btn btn-primary" onclick="adminManager.showUserAccessForm()">+ Assign User</button>
         </div>
-        <div id="userAccessManagement"></div>
       </div>
+
+      <div id="clientCards"></div>
     `;
 
     document.getElementById('adminContent').innerHTML = html;
-    this.renderClientTable();
-    this.renderProjectTable();
-    this.renderUserAccessTable();
-    this.renderActivityTable();
+    this.renderClientCards();
   }
 
-  renderClientTable() {
-    const html = `
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Client Code</th>
-              <th>Client Name</th>
-              <th>Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${this.clients.length === 0 ? `
-              <tr><td colspan="4" class="text-center">No clients yet. Add your first client above.</td></tr>
-            ` : this.clients.map(client => `
-              <tr>
-                <td><strong>${client.code}</strong></td>
-                <td>${client.name}</td>
-                <td>${client.description}</td>
-                <td>
-                  <div class="table-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="adminManager.editClient('${client.id}')">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="adminManager.deleteClient('${client.id}')">Delete</button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-    document.getElementById('clientManagement').innerHTML = html;
+  renderClientCards() {
+    const container = document.getElementById('clientCards');
+    
+    if (this.clients.length === 0) {
+      container.innerHTML = `
+        <div class="card">
+          <div style="padding: 40px; text-align: center; color: var(--gray-600);">
+            <div style="font-size: 48px; margin-bottom: 16px;">🏢</div>
+            <h3>No Clients Yet</h3>
+            <p>Add your first client using the button above</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const cardsHtml = this.clients.map(client => {
+      const clientProjects = this.projects.filter(p => p.clientCode === client.code);
+      const clientUsers = this.userAccess.filter(a => a.clientCode === client.code);
+      const clientActivities = this.activities.filter(a => 
+        clientProjects.some(p => p.name === a.projectName)
+      );
+
+      return `
+        <div class="card">
+          <div class="card-header" style="cursor: pointer;" onclick="adminManager.toggleClientCard('${client.code}')">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3 class="card-title">${client.code} - ${client.name}</h3>
+                <p class="card-subtitle">${client.description}</p>
+              </div>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <span style="background: var(--gray-100); padding: 4px 12px; border-radius: 4px; font-size: 14px;">
+                  ${clientProjects.length} projects • ${clientUsers.length} users
+                </span>
+                <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); adminManager.editClient('${client.id}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); adminManager.deleteClient('${client.id}')">Delete</button>
+                <span id="toggle-${client.code}" style="font-size: 20px;">▼</span>
+              </div>
+            </div>
+          </div>
+          
+          <div id="client-${client.code}" class="client-details" style="display: none;">
+            <!-- Projects -->
+            <div style="padding: 20px; border-bottom: 1px solid var(--gray-200);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="margin: 0;">Projects (${clientProjects.length})</h4>
+                <button class="btn btn-sm btn-primary" onclick="adminManager.showProjectForm(null, '${client.code}')">+ Add Project</button>
+              </div>
+              ${clientProjects.length === 0 ? 
+                '<p style="color: var(--gray-600); font-style: italic;">No projects yet</p>' :
+                `<div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Project Name</th>
+                        <th>Description</th>
+                        <th>Activities</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${clientProjects.map(project => {
+                        const projectActivities = clientActivities.filter(a => a.projectName === project.name);
+                        return `
+                          <tr>
+                            <td><strong>${project.name}</strong></td>
+                            <td>${project.description}</td>
+                            <td>${projectActivities.length} activities</td>
+                            <td>
+                              <div class="table-actions">
+                                <button class="btn btn-sm btn-secondary" onclick="adminManager.editProject('${project.id}')">Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="adminManager.deleteProject('${project.id}')">Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>`
+              }
+            </div>
+
+            <!-- Activities -->
+            <div style="padding: 20px; border-bottom: 1px solid var(--gray-200);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="margin: 0;">Activities (${clientActivities.length})</h4>
+                <button class="btn btn-sm btn-primary" onclick="adminManager.showActivityForm(null, '${client.code}')">+ Add Activity</button>
+              </div>
+              ${clientActivities.length === 0 ?
+                '<p style="color: var(--gray-600); font-style: italic;">No activities yet</p>' :
+                `<div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Project</th>
+                        <th>Activity Name</th>
+                        <th>Billable</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${clientActivities.map(activity => `
+                        <tr>
+                          <td>${activity.projectName}</td>
+                          <td><strong>${activity.name}</strong></td>
+                          <td>${activity.billable ? '✓ Yes' : '✗ No'}</td>
+                          <td>
+                            <div class="table-actions">
+                              <button class="btn btn-sm btn-secondary" onclick="adminManager.editActivity('${activity.id}')">Edit</button>
+                              <button class="btn btn-sm btn-danger" onclick="adminManager.deleteActivity('${activity.id}')">Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>`
+              }
+            </div>
+
+            <!-- User Assignments -->
+            <div style="padding: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="margin: 0;">Assigned Users (${clientUsers.length})</h4>
+                <button class="btn btn-sm btn-primary" onclick="adminManager.showUserAccessForm('${client.code}')">+ Assign User</button>
+              </div>
+              ${clientUsers.length === 0 ?
+                '<p style="color: var(--gray-600); font-style: italic;">No users assigned yet</p>' :
+                `<div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>User Email</th>
+                        <th>Team</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${clientUsers.map(access => `
+                        <tr>
+                          <td>${access.userEmail}</td>
+                          <td>${access.team || 'Onshore'}</td>
+                          <td>
+                            <button class="btn btn-sm btn-danger" onclick="adminManager.deleteUserAccess('${access.id}')">Remove</button>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>`
+              }
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = cardsHtml;
   }
 
-  renderProjectTable() {
-    const html = `
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Client Code</th>
-              <th>Project Name</th>
-              <th>Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${this.projects.length === 0 ? `
-              <tr><td colspan="4" class="text-center">No projects yet. Add your first project above.</td></tr>
-            ` : this.projects.map(project => `
-              <tr>
-                <td><strong>${project.clientCode}</strong></td>
-                <td>${project.name}</td>
-                <td>${project.description}</td>
-                <td>
-                  <div class="table-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="adminManager.editProject('${project.id}')">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="adminManager.deleteProject('${project.id}')">Delete</button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-    document.getElementById('projectManagement').innerHTML = html;
-  }
-
-    renderActivityTable() {
-  const html = `
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Project Name</th>
-            <th>Activity Name</th>
-            <th>Description</th>
-            <th>Billable</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${this.activities.length === 0 ? `
-            <tr><td colspan="4" class="text-center">No activities yet. Add your first activity above.</td></tr>
-          ` : this.activities.map(activity => `
-            <tr>
-              <td><strong>${activity.projectName}</strong></td>
-              <td>${activity.name}</td>
-              <td>${activity.description}</td>
-              <td>${activity.billable ? '✓ Yes' : '✗ No'}</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn btn-sm btn-secondary" onclick="adminManager.editActivity('${activity.id}')">Edit</button>
-                  <button class="btn btn-sm btn-danger" onclick="adminManager.deleteActivity('${activity.id}')">Delete</button>
-                </div>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-  document.getElementById('activityManagement').innerHTML = html;
-}
-
-  renderUserAccessTable() {
-    const html = `
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>User Email</th>
-              <th>Client Code</th>
-              <th>Client Name</th>
-              <th>Team</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${this.userAccess.length === 0 ? `
-              <tr><td colspan="4" class="text-center">No user assignments yet. Assign users to clients above.</td></tr>
-            ` : this.userAccess.map(access => {
-              const client = this.clients.find(c => c.code === access.clientCode);
-              return `
-                <tr>
-                  <td>${access.userEmail}</td>
-                  <td><strong>${access.clientCode}</strong></td>
-                  <td>${client ? client.name : 'Unknown'}</td>
-                  <td>${access.team || 'Onshore'}</td>
-                  <td>
-                    <button class="btn btn-sm btn-danger" onclick="adminManager.deleteUserAccess('${access.id}')">Remove</button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-    document.getElementById('userAccessManagement').innerHTML = html;
+  toggleClientCard(clientCode) {
+    const details = document.getElementById(`client-${clientCode}`);
+    const toggle = document.getElementById(`toggle-${clientCode}`);
+    
+    if (details.style.display === 'none') {
+      details.style.display = 'block';
+      toggle.textContent = '▲';
+    } else {
+      details.style.display = 'none';
+      toggle.textContent = '▼';
+    }
   }
 
   showClientForm(clientId = null) {
@@ -339,8 +345,7 @@ class AdminManager {
 
       this.closeForm();
       await this.loadAllData();
-      this.renderClientTable();
-      this.renderAdminDashboard();
+      this.renderClientCards();
       if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
     } catch (err) {
@@ -349,7 +354,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
           }
       }
 
-  showProjectForm(projectId = null) {
+  showProjectForm(projectId = null, preselectedClientCode = null) {
     const project = projectId ? this.projects.find(p => p.id === projectId) : null;
     const isEdit = !!project;
     const stripHtml = (html) => {
@@ -369,7 +374,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
             <select id="projectClientCode" class="form-select" required>
               <option value="">Select a client</option>
               ${this.clients.map(c => `
-                <option value="${c.code}" ${project?.clientCode === c.code ? 'selected' : ''}>
+                <option value="${c.code}" ${(project?.clientCode === c.code || preselectedClientCode === c.code) ? 'selected' : ''}>
                   ${c.code} - ${c.name}
                 </option>
               `).join('')}
@@ -431,8 +436,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
 
       this.closeForm();
       await this.loadAllData();
-      this.renderProjectTable();
-      this.renderAdminDashboard();
+      this.renderClientCards();
       if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
           } catch (err) {
@@ -441,7 +445,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
           }
   }
 
-  showUserAccessForm() {
+  showUserAccessForm(preselectedClientCode = null) {
   const formHtml = `
     <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 500px; box-shadow: var(--shadow-lg);">
       <div class="card-header">
@@ -460,7 +464,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
           <select id="accessClientCode" class="form-select" required>
             <option value="">Select a client</option>
             ${this.clients.map(c => `
-              <option value="${c.code}">${c.code} - ${c.name}</option>
+              <option value="${c.code}" ${preselectedClientCode === c.code ? 'selected' : ''}>${c.code} - ${c.name}</option>
             `).join('')}
           </select>
         </div>
@@ -539,9 +543,14 @@ if (metricsManager.initialized) await metricsManager.refresh();
   });
 }
 
-  showActivityForm(activityId = null) {
+  showActivityForm(activityId = null, preselectedClientCode = null) {
   const activity = activityId ? this.activities.find(a => a.id === activityId) : null;
   const isEdit = !!activity;
+
+  // Filter projects by preselected client if provided
+  const availableProjects = preselectedClientCode 
+    ? this.projects.filter(p => p.clientCode === preselectedClientCode)
+    : this.projects;
 
   const stripHtml = (html) => {
     const tmp = document.createElement('div');
@@ -559,7 +568,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
           <label class="form-label required">Project</label>
           <select id="activityProjectName" class="form-select" required>
             <option value="">Select a project</option>
-            ${this.projects.map(p => `
+            ${availableProjects.map(p => `
               <option value="${p.name}" ${activity?.projectName === p.name ? 'selected' : ''}>
                 ${p.clientCode} - ${p.name}
               </option>
@@ -625,8 +634,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
 
     this.closeForm();
     await this.loadAllData();
-    this.renderActivityTable();
-    this.renderAdminDashboard();
+    this.renderClientCards();
     if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
   } catch (err) {
@@ -646,8 +654,7 @@ async deleteActivity(activityId) {
     await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.activities, activityId);
     UI.showSuccess('Activity deleted successfully!');
     await this.loadAllData();
-    this.renderActivityTable();
-    this.renderAdminDashboard();
+    this.renderClientCards();
     if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
   } catch (err) {
@@ -690,8 +697,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
       UI.showSuccess('User assigned successfully!');
       this.closeForm();
       await this.loadAllData();
-      this.renderUserAccessTable();
-      this.renderAdminDashboard();
+      this.renderClientCards();
       if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
           } catch (err) {
@@ -728,10 +734,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
     
     UI.showSuccess('Client and related records deleted successfully!');
     await this.loadAllData();
-    this.renderClientTable();
-    this.renderProjectTable();
-    this.renderUserAccessTable();
-    this.renderAdminDashboard();
+    this.renderClientCards();
     if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
   } catch (err) {
@@ -747,8 +750,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
       await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.projects, projectId);
       UI.showSuccess('Project deleted successfully!');
       await this.loadAllData();
-      this.renderProjectTable();
-      this.renderAdminDashboard();
+      this.renderClientCards();
       if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
     } catch (err) {
@@ -764,8 +766,7 @@ if (metricsManager.initialized) await metricsManager.refresh();
       await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.userClientAccess, accessId);
       UI.showSuccess('User assignment removed!');
       await this.loadAllData();
-      this.renderUserAccessTable();
-      this.renderAdminDashboard();
+      this.renderClientCards();
       if (timeEntryManager.initialized) await timeEntryManager.refresh();
 if (metricsManager.initialized) await metricsManager.refresh();
     } catch (err) {
