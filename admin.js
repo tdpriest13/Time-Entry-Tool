@@ -198,6 +198,7 @@ class AdminManager {
                       <tr>
                         <th>Project</th>
                         <th>Activity Name</th>
+                        <th>Description</th>
                         <th>Billable</th>
                         <th>Actions</th>
                       </tr>
