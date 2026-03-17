@@ -1,95 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Undocked Timekeeping</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Entry Tool</title>
+  <link rel="stylesheet" href="styles.css">
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 </head>
 <body>
-  <!-- Sign In Page -->
-  <div id="signinPage" class="signin-container">
-    <div class="signin-card">
-      <h1>⏱️ Undocked Timekeeping</h1>
-      <p>Sign in with your organization account to access the time tracking tool</p>
-      <button class="btn btn-primary" onclick="handleSignIn()">
-        Sign In with Microsoft
+  <!-- Sign-In Page -->
+  <div id="signInPage" class="sign-in-page">
+    <div class="sign-in-container">
+      <div class="sign-in-header">
+        <div class="app-icon">⏰</div>
+        <h1>Undocked Timekeeping</h1>
+        <p>Track your time, measure your impact</p>
+      </div>
+      <button id="signInButton" class="btn-sign-in">
+        <span>🔐</span> Sign In with Microsoft
       </button>
     </div>
   </div>
 
   <!-- Main Application -->
-  <div id="mainApp" class="app-container hidden">
-    
+  <div id="appContainer" class="app-container hidden">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1>⏱️ Undocked</h1>
-        <div class="user-email" id="currentUserEmail">Loading...</div>
+        <div class="app-icon-small">⏰</div>
+        <div class="app-title">Undocked</div>
       </div>
 
-      <nav class="sidebar-nav">
-  <div class="nav-item active" onclick="navigateTo('timeEntry')">
-    <span class="nav-icon">📝</span>
-    <span>My Time</span>
-  </div>
-  <div class="nav-item" onclick="navigateTo('metrics')">
-    <span class="nav-icon">📊</span>
-    <span>Metrics</span>
-  </div>
-  <div class="nav-item hidden" id="adminNav" onclick="navigateTo('admin')">
-    <span class="nav-icon">⚙️</span>
-    <span>Admin</span>
-  </div>
-</nav>
-
-      <div class="sidebar-footer">
-        <button class="btn btn-secondary" style="width: 100%;" onclick="handleSignOut()">
-          Sign Out
-        </button>
+      <div class="user-info" id="userInfo">
+        <div class="user-avatar">👤</div>
+        <div class="user-details">
+          <div class="user-name" id="userName">Loading...</div>
+          <div class="user-email" id="userEmail">...</div>
+        </div>
       </div>
+
+      <nav class="nav-menu">
+        <div class="nav-item active" onclick="navigateTo('timeEntry')">📝 My Time</div>
+        <div class="nav-item" onclick="navigateTo('metrics')">📊 Metrics</div>
+        <div class="nav-item hidden" id="adminMetricsNav" onclick="navigateTo('adminMetrics')">📈 Admin Metrics</div>
+        <div class="nav-item hidden" id="adminNav" onclick="navigateTo('admin')">⚙️ Admin</div>
+      </nav>
+
+      <button id="signOutButton" class="btn-sign-out">Sign Out</button>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
       <!-- Time Entry View -->
-      <div id="timeEntryView">
-        <header class="content-header">
-          <h2>My Time Entry</h2>
-        </header>
-        <div class="content-body">
-          <div id="timeEntryContent"></div>
-          <div id="myEntriesContent"></div>
+      <div id="timeEntryView" class="view-container">
+        <div class="view-header">
+          <h1 class="view-title">My Time</h1>
+          <p class="view-subtitle">Log and manage your time entries</p>
         </div>
+        <div id="timeEntryContent"></div>
+        <div id="myEntriesContent" style="margin-top: 32px;"></div>
+      </div>
+
+      <!-- Metrics View -->
+      <div id="metricsView" class="view-container hidden">
+        <div class="view-header">
+          <h1 class="view-title">Metrics</h1>
+          <p class="view-subtitle">Track your personal utilization</p>
+        </div>
+        <div id="metricsContent"></div>
+      </div>
+
+      <!-- Admin Metrics View -->
+      <div id="adminMetricsView" class="view-container hidden">
+        <div class="view-header">
+          <h1 class="view-title">Admin Metrics</h1>
+          <p class="view-subtitle">Organization-wide utilization and analytics</p>
+        </div>
+        <div id="adminMetricsContent"></div>
       </div>
 
       <!-- Admin View -->
-      <div id="adminView" class="hidden">
-        <header class="content-header">
-          <h2>Admin Panel</h2>
-        </header>
-        <div class="content-body">
-          <div id="adminContent"></div>
+      <div id="adminView" class="view-container hidden">
+        <div class="view-header">
+          <h1 class="view-title">Admin Panel</h1>
+          <p class="view-subtitle">Manage clients, projects, and user access</p>
         </div>
+        <div id="adminContent"></div>
       </div>
-
-       <!-- Metrics View -->
-<div id="metricsView" class="hidden">
-  <header class="content-header">
-    <h2>Metrics</h2>
-  </header>
-  <div class="content-body">
-    <div id="metricsContent"></div>
-  </div>
-</div>
     </main>
   </div>
-  
-  <!-- Load Scripts -->
+
+  <!-- Scripts -->
   <script src="config.js"></script>
   <script src="utils.js"></script>
   <script src="auth.js"></script>
@@ -100,82 +101,48 @@
   <script>
     // Navigation
     function navigateTo(view) {
-  // Update nav items
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.classList.remove('active');
-  });
-  event.target.closest('.nav-item').classList.add('active');
+      // Hide all views
+      document.querySelectorAll('.view-container').forEach(v => v.classList.add('hidden'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-  // Show/hide views
-  document.getElementById('timeEntryView').classList.add('hidden');
-  document.getElementById('metricsView').classList.add('hidden');
-  document.getElementById('adminView').classList.add('hidden');
-
-  if (view === 'timeEntry') {
-  document.getElementById('timeEntryView').classList.remove('hidden');
-  if (!timeEntryManager.initialized) {
-    timeEntryManager.initialize();
-  }
-  } else if (view === 'metrics') {
-    document.getElementById('metricsView').classList.remove('hidden');
-    if (!metricsManager.initialized) {
-      metricsManager.initialize();
-    }
-  } else if (view === 'admin') {
-    document.getElementById('adminView').classList.remove('hidden');
-    if (!adminManager.clients.length) {
-      adminManager.initialize();
-    }
-  }
-}
-
-    // Sign In Handler
-    async function handleSignIn() {
-      const result = await authManager.signIn();
-      
-      if (result.success) {
-        document.getElementById('signinPage').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        initializeApp(result);
-      } else {
-        UI.showError('Sign-in failed. Please try again.');
+      // Show selected view
+      if (view === 'timeEntry') {
+        document.getElementById('timeEntryView').classList.remove('hidden');
+        document.querySelector('.nav-item').classList.add('active');
+        if (!timeEntryManager.initialized) {
+          timeEntryManager.initialize();
+          timeEntryManager.initialized = true;
+        }
+      } else if (view === 'metrics') {
+        document.getElementById('metricsView').classList.remove('hidden');
+        document.querySelectorAll('.nav-item')[1].classList.add('active');
+        if (!metricsManager.initialized) {
+          metricsManager.initialize();
+        } else {
+          metricsManager.renderUserMetrics(authManager.getUserEmail());
+        }
+      } else if (view === 'adminMetrics') {
+        document.getElementById('adminMetricsView').classList.remove('hidden');
+        document.getElementById('adminMetricsNav').classList.add('active');
+        if (!metricsManager.initialized) {
+          metricsManager.initialize().then(() => {
+            metricsManager.renderAdminMetrics();
+          });
+        } else {
+          metricsManager.renderAdminMetrics();
+        }
+      } else if (view === 'admin') {
+        document.getElementById('adminView').classList.remove('hidden');
+        document.getElementById('adminNav').classList.add('active');
+        if (!adminManager.initialized) {
+          adminManager.initialize();
+          adminManager.initialized = true;
+        }
       }
     }
 
-    // Sign Out Handler
-    async function handleSignOut() {
-      const result = await authManager.signOut();
-      if (result.success) {
-        window.location.reload();
-      }
-    }
-
-    // Initialize App
-    function initializeApp(authResult) {
-      // Display user email
-      document.getElementById('currentUserEmail').textContent = authResult.user.username;
-
-      // Show admin nav if admin
-      if (authResult.isAdmin) {
-        document.getElementById('adminNav').classList.remove('hidden');
-      }
-
-      // Initialize time entry manager
-      timeEntryManager.initialize();
-    }
-
-    // On Page Load - Try Silent Sign-In
-    window.addEventListener('DOMContentLoaded', async () => {
-      const result = await authManager.silentSignIn();
-      
-      if (result.success) {
-        document.getElementById('signinPage').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        initializeApp(result);
-      } else {
-        document.getElementById('signinPage').classList.remove('hidden');
-      }
-    });
+    // Initialize on load
+    authManager.initialize();
   </script>
 </body>
 </html>
