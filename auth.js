@@ -23,10 +23,58 @@ class AuthManager {
     });
   }
 
+  async initialize() {
+    // Try silent sign-in first
+    const silentResult = await this.silentSignIn();
+    
+    if (silentResult.success) {
+      this.showApp();
+    } else {
+      this.showSignInPage();
+    }
+    
+    // Wire up buttons
+    document.getElementById('signInButton').addEventListener('click', async () => {
+      const result = await this.signIn();
+      if (result.success) {
+        this.showApp();
+      }
+    });
+    
+    document.getElementById('signOutButton').addEventListener('click', async () => {
+      await this.signOut();
+      window.location.reload();
+    });
+  }
+
+  showSignInPage() {
+    document.getElementById('signInPage').classList.remove('hidden');
+    document.getElementById('appContainer').classList.add('hidden');
+  }
+
+  showApp() {
+    document.getElementById('signInPage').classList.add('hidden');
+    document.getElementById('appContainer').classList.remove('hidden');
+    
+    // Update UI
+    document.getElementById('userName').textContent = this.currentUser.name || 'User';
+    document.getElementById('userEmail').textContent = this.currentUser.username;
+    
+    // Show admin nav if admin
+    if (this.isAdmin) {
+      document.getElementById('adminNav').classList.remove('hidden');
+      document.getElementById('adminMetricsNav').classList.remove('hidden');
+    }
+    
+    // Initialize time entry manager
+    timeEntryManager.initialize();
+    timeEntryManager.initialized = true;
+  }
+
   async signIn() {
     try {
       const result = await this.msalInstance.loginPopup({
-        scopes: ["User.Read", "Sites.ReadWrite.All"]
+        scopes: ["User.Read", "Sites.ReadWrite.All", "User.ReadBasic.All"]
       });
 
       this.msalInstance.setActiveAccount(result.account);
