@@ -20,16 +20,16 @@ class MetricsManager {
       UI.showError('Failed to load metrics data. Please refresh the page.');
     }
   }
-
-  async refresh() {
-    try {
-      await this.loadAllData();
-      this.renderMetrics();
-    } catch (err) {
-      console.error('Failed to refresh metrics:', err);
-    }
+  
+async refresh() {
+  try {
+    await this.loadAllData();
+    this.renderMetrics();
+  } catch (err) {
+    console.error('Failed to refresh metrics:', err);
   }
-
+}
+  
   async loadAllData() {
     try {
       const [utilizationRules, holidays, userAccess, timeEntries, activities] = await Promise.all([
@@ -97,9 +97,14 @@ this.utilizationRules = utilizationRules.map(item => ({
   }
 
   renderMetrics() {
-    // Always render user metrics in the regular Metrics view
+    const isAdmin = authManager.getIsAdmin();
     const userEmail = authManager.getUserEmail();
-    this.renderUserMetrics(userEmail);
+
+    if (isAdmin) {
+      this.renderAdminMetrics();
+    } else {
+      this.renderUserMetrics(userEmail);
+    }
   }
 
   renderUserMetrics(userEmail) {
@@ -179,90 +184,17 @@ this.utilizationRules = utilizationRules.map(item => ({
   }
 
   renderAdminMetrics() {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-
-    // Get all unique users
-    const allUsers = [...new Set(this.userAccess.map(ua => ua.userEmail))];
-
-    if (allUsers.length === 0) {
-      UI.showEmptyState('adminMetricsContent', '📈', 'No Data Available', 'No users have been assigned to clients yet.');
-      return;
-    }
-
-    // Calculate metrics for all users across all their clients
-    const allMetrics = [];
-    allUsers.forEach(userEmail => {
-      const userClients = this.userAccess.filter(
-        ua => ua.userEmail.toLowerCase() === userEmail.toLowerCase()
-      );
-
-      userClients.forEach(assignment => {
-        const rules = this.utilizationRules.find(r => r.clientCode === assignment.clientCode);
-        const metrics = this.calculateUtilization(
-          userEmail,
-          assignment.clientCode,
-          currentYear,
-          currentMonth,
-          rules,
-          assignment
-        );
-        allMetrics.push({
-          userEmail,
-          clientCode: assignment.clientCode,
-          ...metrics
-        });
-      });
-    });
-
     const html = `
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Organization Utilization - ${this.getMonthName(currentMonth)} ${currentYear}</h3>
+          <h3 class="card-title">Admin Metrics Dashboard</h3>
           <p class="card-subtitle">View utilization across all users and clients</p>
         </div>
-
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Client</th>
-                <th>Allocation</th>
-                <th>Billable Hours</th>
-                <th>Non-Billable Hours</th>
-                <th>Total Hours</th>
-                <th>Available Hours</th>
-                <th>Utilization</th>
-                <th>Target</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${allMetrics.map(m => `
-                <tr>
-                  <td>${m.userEmail}</td>
-                  <td><strong>${m.clientCode}</strong></td>
-                  <td>${m.allocation}%</td>
-                  <td>${m.billableHours.toFixed(2)}</td>
-                  <td>${m.nonBillableHours.toFixed(2)}</td>
-                  <td>${m.totalHours.toFixed(2)}</td>
-                  <td>${m.availableHours.toFixed(2)}</td>
-                  <td>
-                    <strong style="color: ${m.utilization >= m.target ? 'var(--success)' : 'var(--danger)'}">
-                      ${m.utilization.toFixed(1)}%
-                    </strong>
-                  </td>
-                  <td>${m.target.toFixed(0)}%</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+        <p style="padding: 20px;">Admin metrics coming soon...</p>
       </div>
     `;
 
-    document.getElementById('adminMetricsContent').innerHTML = html;
+    document.getElementById('metricsContent').innerHTML = html;
   }
 
   calculateUtilization(userEmail, clientCode, year, month, rules, assignment) {
