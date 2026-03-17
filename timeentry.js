@@ -247,7 +247,7 @@ class TimeEntryManager {
     activitySelect.innerHTML = `
       <option value="">Select an activity</option>
       ${projectActivities.map(a => `
-        <option value="${a.name}">${a.name}</option>
+        <option value="${a.name}">${a.name}${a.description ? ' - ' + a.description : ''}</option>
       `).join('')}
     `;
     activitySelect.disabled = false;
@@ -574,7 +574,7 @@ const html = `
     activitySelect.innerHTML = `
       <option value="">Select an activity</option>
       ${projectActivities.map(a => `
-        <option value="${a.name}">${a.name}</option>
+        <option value="${a.name}">${a.name}${a.description ? ' - ' + a.description : ''}</option>
       `).join('')}
     `;
     activitySelect.disabled = false;
