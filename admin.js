@@ -207,6 +207,7 @@ class AdminManager {
                         <tr>
                           <td>${activity.projectName}</td>
                           <td><strong>${activity.name}</strong></td>
+                          <td>${activity.description || '-'}</td>
                           <td>${activity.billable ? '✓ Yes' : '✗ No'}</td>
                           <td>
                             <div class="table-actions">
