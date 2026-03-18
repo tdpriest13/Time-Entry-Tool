@@ -6,6 +6,7 @@ class AdminManager {
     this.projects = [];
     this.userAccess = [];
     this.activities = [];
+    this.utilizationRules = [];
     this.allUsers = [];
   }
 
@@ -20,49 +21,66 @@ class AdminManager {
   }
 
   async loadAllData() {
-    try {
-      const [clients, projects, userAccess, activities] = await Promise.all([
-        sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.clients),
-        sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.projects),
-        sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.userClientAccess),
-        sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.activities)
-      ]);
+  try {
+    const [clients, projects, userAccess, activities, utilizationRules] = await Promise.all([
+      sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.clients),
+      sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.projects),
+      sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.userClientAccess),
+      sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.activities),
+      sharePointAPI.getItems(CONFIG.SHAREPOINT.lists.clientUtilizationRules)
+    ]);
 
-      this.clients = clients.map(item => ({
-        id: item.id,
-        name: item.fields.Title,
-        code: item.fields.ClientCode,
-        description: item.fields.ClientDescription
-      }));
+    // Load clients to map lookup IDs
+    const clientsMap = {};
+    clients.forEach(client => {
+      clientsMap[client.id] = client.fields.ClientCode;
+    });
 
-      this.projects = projects.map(item => ({
-        id: item.id,
-        name: item.fields.Title,
-        description: item.fields.ProjectDescription,
-        clientCode: item.fields.ClientCode
-      }));
+    this.clients = clients.map(item => ({
+      id: item.id,
+      name: item.fields.Title,
+      code: item.fields.ClientCode,
+      description: item.fields.ClientDescription
+    }));
 
-      this.userAccess = userAccess.map(item => ({
-        id: item.id,
-        userEmail: item.fields.Title, 
-        clientCode: item.fields.ClientCode,
-        team: item.fields.Team || 'Onshore'
-      }));
+    this.projects = projects.map(item => ({
+      id: item.id,
+      name: item.fields.Title,
+      description: item.fields.ProjectDescription,
+      clientCode: item.fields.ClientCode
+    }));
 
-      this.activities = activities.map(item => ({
+    this.userAccess = userAccess.map(item => ({
+      id: item.id,
+      userEmail: item.fields.Title, 
+      clientCode: item.fields.ClientCode,
+      team: item.fields.Team || 'Onshore'
+    }));
+
+    this.activities = activities.map(item => ({
       id: item.id,
       name: item.fields.Title,
       description: item.fields.ActivityDescription,
       projectName: item.fields.ProjectName,
-  billable: item.fields.Billable || false
-}));
-      
-      console.log('Admin data loaded');
-    } catch (err) {
-      console.error('Error loading admin data:', err);
-      throw err;
-    }
+      billable: item.fields.Billable || false
+    }));
+
+    this.utilizationRules = utilizationRules.map(item => ({
+      id: item.id,
+      clientCode: clientsMap[item.fields.ClientCodeLookupId] || null,
+      targetUtilization: parseFloat(item.fields.TargetUtilizationPercent) || 80,
+      countOnlyBillable: item.fields.CountOnlyBillable !== false,
+      standardHoursPerWeek: parseFloat(item.fields.StandardHoursPerWeek) || 40,
+      holidayCalendar: item.fields.HolidayCalendar || 'Both',
+      calculationMethod: item.fields.UtilizationCalculationMethod || 'Theoretical Available Hours'
+    }));
+    
+    console.log('Admin data loaded');
+  } catch (err) {
+    console.error('Error loading admin data:', err);
+    throw err;
   }
+}
 
   renderAdminDashboard() {
     const html = `
@@ -87,6 +105,7 @@ class AdminManager {
         </div>
         <div class="btn-group" style="padding: 20px;">
           <button class="btn btn-primary" onclick="adminManager.showClientForm()">+ Add Client</button>
+          <button class="btn btn-primary" onclick="adminManager.showUtilizationRuleForm()">+ Utilization Rule</button>
           <button class="btn btn-primary" onclick="adminManager.showProjectForm()">+ Add Project</button>
           <button class="btn btn-primary" onclick="adminManager.showActivityForm()">+ Add Activity</button>
           <button class="btn btn-primary" onclick="adminManager.showUserAccessForm()">+ Assign User</button>
@@ -256,6 +275,38 @@ class AdminManager {
                 </div>`
               }
             </div>
+            <!-- Utilization Rules -->
+<div style="padding: 20px; border-top: 1px solid var(--gray-200);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <h4 style="margin: 0;">Utilization Settings</h4>
+    ${(() => {
+      const rule = adminManager.utilizationRules.find(r => r.clientCode === client.code);
+      return rule 
+        ? `<button class="btn btn-sm btn-secondary" onclick="adminManager.showUtilizationRuleForm('${rule.id}')">Edit</button>`
+        : `<button class="btn btn-sm btn-primary" onclick="adminManager.showUtilizationRuleForm()">+ Add Rule</button>`;
+    })()}
+  </div>
+  ${(() => {
+    const rule = adminManager.utilizationRules.find(r => r.clientCode === client.code);
+    if (!rule) {
+      return '<p style="color: var(--gray-600); font-style: italic;">Using default settings (80% target, 40 hrs/week)</p>';
+    }
+    return `
+      <div style="background: var(--gray-50); padding: 12px; border-radius: 4px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px;">
+          <div><strong>Target:</strong> ${rule.targetUtilization}%</div>
+          <div><strong>Std Hours/Week:</strong> ${rule.standardHoursPerWeek}</div>
+          <div><strong>Method:</strong> ${rule.calculationMethod}</div>
+          <div><strong>Holiday Calendar:</strong> ${rule.holidayCalendar}</div>
+          <div style="grid-column: 1 / -1;"><strong>Count Only Billable:</strong> ${rule.countOnlyBillable ? 'Yes' : 'No'}</div>
+        </div>
+        <div style="margin-top: 8px;">
+          <button class="btn btn-sm btn-danger" onclick="adminManager.deleteUtilizationRule('${rule.id}')">Delete Rule</button>
+        </div>
+      </div>
+    `;
+  })()}
+</div>
           </div>
         </div>
       `;
@@ -791,6 +842,153 @@ if (metricsManager.initialized) await metricsManager.refresh();
     if (overlay) overlay.remove();
     if (form) form.remove();
   }
+
+  showUtilizationRuleForm(ruleId = null) {
+  const rule = ruleId ? this.utilizationRules.find(r => r.id === ruleId) : null;
+  const isEdit = !!rule;
+
+  // Get clients that don't have rules yet (for new rules)
+  const clientsWithRules = this.utilizationRules.map(r => r.clientCode);
+  const availableClients = this.clients.filter(c => 
+    isEdit ? c.code === rule.clientCode : !clientsWithRules.includes(c.code)
+  );
+
+  const formHtml = `
+    <div class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 600px; box-shadow: var(--shadow-lg);">
+      <div class="card-header">
+        <h3 class="card-title">${isEdit ? 'Edit' : 'Add'} Utilization Rule</h3>
+      </div>
+      <form id="utilizationRuleForm">
+        <div class="form-group">
+          <label class="form-label required">Client</label>
+          <select id="ruleClientCode" class="form-select" required ${isEdit ? 'disabled' : ''}>
+            <option value="">Select a client</option>
+            ${availableClients.map(c => `
+              <option value="${c.code}" ${rule?.clientCode === c.code ? 'selected' : ''}>
+                ${c.code} - ${c.name}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label required">Target Utilization %</label>
+            <input type="number" id="targetUtilization" class="form-input" required 
+                   min="0" max="100" step="1" value="${rule?.targetUtilization || 80}" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Standard Hours/Week</label>
+            <input type="number" id="standardHours" class="form-input" required 
+                   min="1" max="80" step="1" value="${rule?.standardHoursPerWeek || 40}" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Calculation Method</label>
+          <select id="calculationMethod" class="form-select" required>
+            <option value="Theoretical Available Hours" ${rule?.calculationMethod === 'Theoretical Available Hours' ? 'selected' : ''}>
+              Theoretical Available Hours
+            </option>
+            <option value="Actual Hours Worked" ${rule?.calculationMethod === 'Actual Hours Worked' ? 'selected' : ''}>
+              Actual Hours Worked
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Holiday Calendar</label>
+          <select id="holidayCalendar" class="form-select" required>
+            <option value="Both" ${rule?.holidayCalendar === 'Both' ? 'selected' : ''}>Both Teams</option>
+            <option value="Onshore" ${rule?.holidayCalendar === 'Onshore' ? 'selected' : ''}>Onshore Only</option>
+            <option value="Offshore" ${rule?.holidayCalendar === 'Offshore' ? 'selected' : ''}>Offshore Only</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" id="countOnlyBillable" 
+                   ${rule?.countOnlyBillable !== false ? 'checked' : ''} style="margin-right: 8px;">
+            Count Only Billable Hours
+          </label>
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="adminManager.closeForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="adminManager.closeForm()"></div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', formHtml);
+
+  document.getElementById('utilizationRuleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await this.saveUtilizationRule(ruleId);
+  });
+}
+
+async saveUtilizationRule(ruleId = null) {
+  const clientCode = document.getElementById('ruleClientCode').value;
+  const targetUtilization = document.getElementById('targetUtilization').value;
+  const standardHours = document.getElementById('standardHours').value;
+  const calculationMethod = document.getElementById('calculationMethod').value;
+  const holidayCalendar = document.getElementById('holidayCalendar').value;
+  const countOnlyBillable = document.getElementById('countOnlyBillable').checked;
+
+  if (!clientCode || !targetUtilization || !standardHours) {
+    UI.showError('All required fields must be filled');
+    return;
+  }
+
+  try {
+    // Get client lookup ID
+    const client = this.clients.find(c => c.code === clientCode);
+    
+    const ruleData = {
+      ClientCodeLookupId: client.id,
+      TargetUtilizationPercent: parseFloat(targetUtilization),
+      StandardHoursPerWeek: parseFloat(standardHours),
+      UtilizationCalculationMethod: calculationMethod,
+      HolidayCalendar: holidayCalendar,
+      CountOnlyBillable: countOnlyBillable
+    };
+
+    if (ruleId) {
+      await sharePointAPI.updateItem(CONFIG.SHAREPOINT.lists.clientUtilizationRules, ruleId, ruleData);
+      UI.showSuccess('Utilization rule updated successfully!');
+    } else {
+      await sharePointAPI.createItem(CONFIG.SHAREPOINT.lists.clientUtilizationRules, ruleData);
+      UI.showSuccess('Utilization rule created successfully!');
+    }
+
+    this.closeForm();
+    await this.loadAllData();
+    this.renderClientCards();
+    if (metricsManager.initialized) await metricsManager.refresh();
+  } catch (err) {
+    console.error('Error saving utilization rule:', err);
+    UI.showError('Failed to save utilization rule. Please try again.');
+  }
+}
+
+async deleteUtilizationRule(ruleId) {
+  if (!confirm('Delete this utilization rule? The client will use default settings.')) return;
+
+  try {
+    await sharePointAPI.deleteItem(CONFIG.SHAREPOINT.lists.clientUtilizationRules, ruleId);
+    UI.showSuccess('Utilization rule deleted!');
+    await this.loadAllData();
+    this.renderClientCards();
+    if (metricsManager.initialized) await metricsManager.refresh();
+  } catch (err) {
+    console.error('Error deleting utilization rule:', err);
+    UI.showError('Failed to delete rule. Please try again.');
+  }
+}
 }
 
 // Global instance
