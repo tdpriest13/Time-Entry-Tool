@@ -71,7 +71,6 @@ class AdminManager {
       targetUtilization: parseFloat(item.fields.TargetUtilizationPercent) || 80,
       countOnlyBillable: item.fields.CountOnlyBillable !== false,
       standardHoursPerWeek: parseFloat(item.fields.StandardHoursPerWeek) || 40,
-      holidayCalendar: item.fields.HolidayCalendar || 'Both',
       calculationMethod: item.fields.UtilizationCalculationMethod || 'Theoretical Available Hours'
     }));
     
@@ -953,7 +952,6 @@ async saveUtilizationRule(ruleId = null) {
       TargetUtilizationPercent: parseFloat(targetUtilization),
       StandardHoursPerWeek: parseFloat(standardHours),
       UtilizationCalculationMethod: calculationMethod,
-      HolidayCalendar: holidayCalendar,
       CountOnlyBillable: countOnlyBillable
     };
 
