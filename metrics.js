@@ -350,32 +350,27 @@ class MetricsManager {
   }
 
   calculateTheoreticalHours(year, month, standardHoursPerWeek, allocationPercent, userTeam, holidayCalendar) {
-    // Get business days in month
-    const businessDays = this.getBusinessDaysInMonth(year, month);
+  const businessDays = this.getBusinessDaysInMonth(year, month);
 
-    // Get applicable holidays
-    const applicableHolidays = this.holidays.filter(holiday => {
-      const holidayDate = new Date(holiday.date);
-      const isInMonth = holidayDate.getMonth() === month && holidayDate.getFullYear() === year;
-      const isBusinessDay = holidayDate.getDay() !== 0 && holidayDate.getDay() !== 6;
+  // Apply holidays based on user's team only
+  const applicableHolidays = this.holidays.filter(holiday => {
+    const holidayDate = new Date(holiday.date);
+    const isInMonth = holidayDate.getMonth() === month && holidayDate.getFullYear() === year;
+    const isBusinessDay = holidayDate.getDay() !== 0 && holidayDate.getDay() !== 6;
 
-      if (!isInMonth || !isBusinessDay) return false;
+    if (!isInMonth || !isBusinessDay) return false;
 
-      // Check if holiday applies to this user
-      if (holidayCalendar === 'Both') {
-        return holiday.team === userTeam || holiday.team === 'Both';
-      } else {
-        return holiday.team === holidayCalendar || holiday.team === 'Both';
-      }
-    });
+    // Holiday applies if it matches user's team OR is marked as "Both"
+    return holiday.team === userTeam || holiday.team === 'Both';
+  });
 
-    const workingDays = businessDays - applicableHolidays.length;
-    const hoursPerDay = standardHoursPerWeek / 5;
-    const totalHours = workingDays * hoursPerDay;
-    const allocatedHours = totalHours * (allocationPercent / 100);
+  const workingDays = businessDays - applicableHolidays.length;
+  const hoursPerDay = standardHoursPerWeek / 5;
+  const totalHours = workingDays * hoursPerDay;
+  const allocatedHours = totalHours * (allocationPercent / 100);
 
-    return allocatedHours;
-  }
+  return allocatedHours;
+}
 
   getBusinessDaysInMonth(year, month) {
     const date = new Date(year, month, 1);
