@@ -296,7 +296,6 @@ class AdminManager {
           <div><strong>Target:</strong> ${rule.targetUtilization}%</div>
           <div><strong>Std Hours/Week:</strong> ${rule.standardHoursPerWeek}</div>
           <div><strong>Method:</strong> ${rule.calculationMethod}</div>
-          <div><strong>Holiday Calendar:</strong> ${rule.holidayCalendar}</div>
           <div style="grid-column: 1 / -1;"><strong>Count Only Billable:</strong> ${rule.countOnlyBillable ? 'Yes' : 'No'}</div>
         </div>
         <div style="margin-top: 8px;">
@@ -897,15 +896,6 @@ if (metricsManager.initialized) await metricsManager.refresh();
         </div>
 
         <div class="form-group">
-          <label class="form-label required">Holiday Calendar</label>
-          <select id="holidayCalendar" class="form-select" required>
-            <option value="Both" ${rule?.holidayCalendar === 'Both' ? 'selected' : ''}>Both Teams</option>
-            <option value="Onshore" ${rule?.holidayCalendar === 'Onshore' ? 'selected' : ''}>Onshore Only</option>
-            <option value="Offshore" ${rule?.holidayCalendar === 'Offshore' ? 'selected' : ''}>Offshore Only</option>
-          </select>
-        </div>
-
-        <div class="form-group">
           <label class="form-label">
             <input type="checkbox" id="countOnlyBillable" 
                    ${rule?.countOnlyBillable !== false ? 'checked' : ''} style="margin-right: 8px;">
@@ -935,7 +925,6 @@ async saveUtilizationRule(ruleId = null) {
   const targetUtilization = document.getElementById('targetUtilization').value;
   const standardHours = document.getElementById('standardHours').value;
   const calculationMethod = document.getElementById('calculationMethod').value;
-  const holidayCalendar = document.getElementById('holidayCalendar').value;
   const countOnlyBillable = document.getElementById('countOnlyBillable').checked;
 
   if (!clientCode || !targetUtilization || !standardHours) {
