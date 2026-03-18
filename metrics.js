@@ -53,7 +53,6 @@ class MetricsManager {
         targetUtilization: parseFloat(item.fields.TargetUtilizationPercent) || 80,
         countOnlyBillable: item.fields.CountOnlyBillable !== false,
         standardHoursPerWeek: parseFloat(item.fields.StandardHoursPerWeek) || 40,
-        holidayCalendar: item.fields.HolidayCalendar || 'Both',
         calculationMethod: item.fields.UtilizationCalculationMethod || 'Theoretical Available Hours'
       }));
 
