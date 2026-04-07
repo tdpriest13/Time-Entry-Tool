@@ -64,7 +64,6 @@ class AdminManager {
       projectName: item.fields.ProjectName,
       billable: item.fields.Billable || false
     }));
-
     this.utilizationRules = utilizationRules.map(item => ({
       id: item.id,
       clientCode: clientsMap[item.fields.ClientCodeLookupId] || null,
