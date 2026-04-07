@@ -50,7 +50,7 @@ class MetricsManager {
       this.utilizationRules = utilizationRules.map(item => ({
         id: item.id,
         clientCode: clientsMap[item.fields.ClientCodeLookupId] || null,
-        targetUtilization: parseFloat(item.fields.TargetUtilizationPercent) || 80,
+        targetUtilization: item.fields.TargetUtilizationPercent != null ? parseFloat(item.fields.TargetUtilizationPercent) : 80,
         countOnlyBillable: item.fields.CountOnlyBillable !== false,
         standardHoursPerWeek: parseFloat(item.fields.StandardHoursPerWeek) || 40,
         calculationMethod: item.fields.UtilizationCalculationMethod || 'Theoretical Available Hours'
